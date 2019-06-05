@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from .base import BaseModel, BaseTrainer
 
@@ -37,7 +38,7 @@ class DeepARModel(BaseModel):
         rnn_at_layer = []
         state_at_layer = []
         for _ in range(self.config.num_layers):
-            rnn_at_layer.append(tf.nn.rnn_cell.LSTMCell(self.config.hidden_units, **self.config.cell_args))
+            rnn_at_layer.append(tf.keras.layers.LSTMCell(self.config.hidden_units, **self.config.cell_args))
             state_at_layer.append(rnn_at_layer[-1].zero_state(self.config.batch_size, dtype=tf.float32))
 
         loc_decoder = tf.layers.Dense(1)
@@ -45,12 +46,16 @@ class DeepARModel(BaseModel):
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
 
         for t in range(self.config.cond_length):
-            if t == 0:  # initialization of input z_0 with zero
+            # initialization of input z_0 with zero
+            if t == 0:
                 z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
-            elif t and t < self.config.cond_length:  # Conditional range: the input is now simply the previous target z_(t-1)
+            # Conditional range: the input is now simply the previous target z_(t-1)
+            elif t and t < self.config.cond_length:
                 z_prev = self.Z[:, t - 1]
-            else: # Prediction range (still used for training but with drawn samples)
+            # Prediction range (still used for training but with drawn samples)
+            else:
                 sample_z = tf.distributions.Normal(loc, scale).sample(self.config.num_traces)
+                # TODO: what happens in num_traces > 1?
                 self.sample_at_time.append(sample_z)
                 z_prev = sample_z
 
@@ -79,12 +84,18 @@ class DeepARTrainer(BaseTrainer):
         super().__init__(sess, model, data, config, logger=logger)
 
 
-    #def train_epoch(self):
-    #    for iteration in self.config.num_iter:
-    #        self.train_step()
+    def train_epoch(self):
+        losses = []
+        for iteration in range(self.config.num_iter):
+            loss = self.train_step()
+            losses.append(loss)
+        loss_epoch = np.mean(losses)
+        self.model.global_step_tensor.eval(self.sess)
+        self.model.save(self.sess)
+        return loss_epoch
 
     def train_step(self):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
-        self.sess.run([self.model.train_step, self.model.loss],
+        _, loss = self.sess.run([self.model.train_step, self.model.loss],
                       feed_dict={self.model.Z: batch_Z, self.model.X: batch_X})
-        #return None
+        return loss
