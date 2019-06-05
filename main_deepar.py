@@ -8,7 +8,7 @@ from deepartransit.data import dataset
 
 if __name__ == '__main__':
 
-    config_path = os.path.join('tests', 'deepar_config_test.yml')
+    config_path = os.path.join('experiments', 'deepar_config.yml')
     config = process_config(config_path)
     model = deepar.DeepARModel(config)
     data = dataset.DataGenerator(config)
@@ -17,7 +17,6 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(init)
         trainer = deepar.DeepARTrainer(sess, model, data, config)
-
         model.load(sess)
         for i in range(10):
             print(model.global_step_tensor.eval(sess))

@@ -25,3 +25,6 @@ def process_config(yaml_file):
     config.summary_dir = os.path.join("deepartransit", "experiments", config.exp_name, "summary/")
     config.checkpoint_dir = os.path.join("deepartransit", "experiments", config.exp_name, "checkpoint/")
     return config
+
+def create_config_file():
+    raise NotImplementedError

@@ -14,6 +14,6 @@ num_layers: 2
 hidden_units: 32
 cell_args: {}
 num_iter: 5
-num_epoch: 2
+num_epochs: 2
 exp_name: exp_test
 
