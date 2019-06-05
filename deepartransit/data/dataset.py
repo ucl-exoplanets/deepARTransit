@@ -16,7 +16,10 @@ class DataGenerator:
 
     def _scale(self):
         # TODO: investigate batch scaling or whole TS scaling
-        train_range = range(self.Z.shape[1] - self.config.test_length)
+        if 'test_length' in self.config:
+            train_range = range(self.Z.shape[1] - self.config.test_length)
+        else:
+            train_range = range(self.Z.shape[1])
         self.scaler_Z = MeanStdScaler(time_axis=1, train_range=train_range)
         self.scaler_X = MeanStdScaler(time_axis=1, train_range=train_range)
         self.Z = self.scaler_Z.fit_transform(self.Z)
@@ -27,8 +30,13 @@ class DataGenerator:
             idx = np.random.choice(self.Z.shape[0], batch_size)
         else:
             idx = range(self.Z.shape[0])
-        start_t = np.random.choice(self.Z.shape[1] - self.config.cond_length - self.config.pred_length - self.config.test_length)
-        end_t = start_t + self.config.cond_length + self.config.pred_length
+
+        if 'cond_length' in self.config and 'pred_length' in self.config and 'test_length' in self.config:
+            start_t = np.random.choice(self.Z.shape[1] - self.config.cond_length - self.config.pred_length - self.config.test_length)
+            end_t = start_t + self.config.cond_length + self.config.pred_length
+        else:
+            start_t = 0
+            end_t = start_t + self.config.pretrans_length + self.config.trans_length + self.config.postrans_length
         yield (self.Z[idx, start_t:end_t], self.X[idx, start_t:end_t])
 
     def get_test_data(self, batch_size=0):

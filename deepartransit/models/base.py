@@ -23,7 +23,7 @@ class BaseModel:
         if latest_checkpoint:
             print("Loading model checkpoint {} ...\n".format(latest_checkpoint))
             self.saver.restore(sess, latest_checkpoint)
-            print("Model loaded from {}".format(self.global_step_tensor))
+            print("Model loaded from {}".format(self.global_step_tensor.eval(sess)))
 
     def delete_checkpoints(self):
         if os.path.isdir(self.config.checkpoint_dir):

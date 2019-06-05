@@ -1,7 +1,6 @@
 num_features: 1
 num_cov: 2
 batch_size: 1
-num_timesteps:
 cond_length: 4
 pred_length: 2
 data_path: deepartransit/data/plc_22807808.npy
@@ -15,5 +14,5 @@ hidden_units: 2
 cell_args: {}
 num_iter: 2
 num_epochs: 2
-exp_name: exp_test
+exp_name: test
 

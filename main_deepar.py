@@ -18,7 +18,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(init)
         trainer = deepar.DeepARTrainer(sess, model, data, config)
-        model.delete_checkpoints()
+        #model.delete_checkpoints()
         model.load(sess)
         trainer.train(add_epochs=3, verbose=True)
 

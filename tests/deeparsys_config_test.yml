@@ -1,0 +1,34 @@
+# Experiment name
+exp_name: test
+
+# Data
+data_path: deepartransit/data/plc_22807808.npy
+cov_path: deepartransit/data/cent_22807808.npy
+num_features: 1
+num_cov: 2
+pretrans_length: 5
+trans_length: 3
+postrans_length: 5
+
+# Data modif
+rescaling: True
+
+# Architecture
+num_layers: 1
+hidden_units: 4
+cell_args: {}
+
+# Algo
+num_traces: 2
+
+# Training
+num_epochs: 2
+num_iter: 2 # TODO: extract form data structure itself?
+learning_rate: 0.001
+batch_size: 25 # TODO: add default behaviour when batch_size=0
+
+
+
+
+
+

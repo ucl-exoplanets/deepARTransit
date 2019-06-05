@@ -1,24 +1,9 @@
 import numpy as np
 import tensorflow as tf
+
 from .base import BaseModel, BaseTrainer
 
-"""
-config file
 
-num_features
-num_cov
-batch_size
-num_timesteps
-encoder_length / cond_length
-decoder_length / pred_length
-learning_rate
-num_traces
-num_layers
-cell_type
-cell_args
-num_iter
-num_epochs
-"""
 
 class DeepARModel(BaseModel):
     def __init__(self, config):
@@ -50,7 +35,7 @@ class DeepARModel(BaseModel):
             if t == 0:
                 z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
             # Conditional range: the input is now simply the previous target z_(t-1)
-            elif t and t < self.config.cond_length:
+            elif t < self.config.cond_length:
                 z_prev = self.Z[:, t - 1]
             # Prediction range (still used for training but with drawn samples)
             else:
@@ -96,12 +81,16 @@ class DeepARTrainer(BaseTrainer):
     def train_step(self):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
         _, loss = self.sess.run([self.model.train_step, self.model.loss],
-                      feed_dict={self.model.Z: batch_Z, self.model.X: batch_X})
+                                feed_dict={self.model.Z: batch_Z, self.model.X: batch_X})
         return loss
 
     def sample_on_test(self):
-        samples_cond_test = np.zeros(shape=(self.config.num_traces, self.config.batch_size, self.config.cond_length + self.config.test_length, self.config.num_features))
+        samples_cond_test = np.zeros(shape=(
+        self.config.num_traces, self.config.batch_size, self.config.cond_length + self.config.test_length,
+        self.config.num_features))
         Z_test, X_test = self.data.get_test_data()
         for trace in range(self.config.num_traces):
-            samples_cond_test[trace] = np.array(self.sess.run(self.model.loc_at_time, feed_dict={self.model.Z: Z_test, self.model.X: X_test})).swapaxes(0,1)
+            samples_cond_test[trace] = np.array(
+                self.sess.run(self.model.loc_at_time, feed_dict={self.model.Z: Z_test, self.model.X: X_test})).swapaxes(
+                0, 1)
         return samples_cond_test
