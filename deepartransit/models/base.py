@@ -1,3 +1,5 @@
+import os
+import shutil
 import tensorflow as tf
 
 
@@ -23,6 +25,11 @@ class BaseModel:
             self.saver.restore(sess, latest_checkpoint)
             print("Model loaded from {}".format(self.global_step_tensor))
 
+    def delete_checkpoints(self):
+        if os.path.isdir(self.config.checkpoint_dir):
+            shutil.rmtree(self.config.checkpoint_dir)
+            print('deleted whole checkpoint directory')
+
     def init_global_step(self):
         # DON'T forget to add the global step tensor to the tensorflow trainer
         with tf.variable_scope('global_step'):
@@ -40,7 +47,7 @@ class BaseModel:
     @staticmethod
     def gaussian_likelihood(sigma):
         def gaussian_loss(y_true, y_pred):
-            return tf.reduce_mean(0.5*tf.log(sigma) + 0.5*tf.div(tf.square(y_true - y_pred), sigma)) + 1e-6 + 6
+            return tf.reduce_mean(0.5*tf.log(sigma) + 0.5*tf.math.divide(tf.square(y_true - y_pred), sigma)) + 1e-6 + 6
         return gaussian_loss
 
 
@@ -57,12 +64,17 @@ class BaseTrainer:
         self.config = config
         self.logger = logger
 
-    def train(self, verbose=False):
-        for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
+    def train(self, add_epochs=0, verbose=False):
+        curr_epoch = self.model.cur_epoch_tensor.eval(self.sess)
+        total_to_train = max(self.config.num_epochs, curr_epoch) + add_epochs
+        if curr_epoch >= total_to_train:
+            print('model already trained for {} epochs (>= {})'.format(curr_epoch, total_to_train))
+            return 0
+        for cur_epoch in range(curr_epoch, total_to_train):
             result = self.train_epoch()
             self.sess.run(self.model.increment_cur_epoch_tensor)
             if verbose:
-                print('curr epoch :', self.model.cur_epoch_tensor.eval(self.sess))
+                print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess), self.model.global_step_tensor.eval(self.sess)))
                 print('train result:', result)
 
     def train_epoch(self):
@@ -72,6 +84,6 @@ class BaseTrainer:
         #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
         self.model.save(self.sess)
 
-    def train_step(self):
-        raise NotImplementedError
+
+
 
