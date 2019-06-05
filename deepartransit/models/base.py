@@ -6,8 +6,9 @@ import tensorflow as tf
 class BaseModel:
     def __init__(self, config):
         self.config = config
-        self.init_global_step()
-        self.init_cur_epoch()
+        self._init_global_step()
+        self._init_cur_epoch()
+        self._init_best_loss()
 
     def init_saver(self):
         self.saver = tf.train.Saver(max_to_keep=5)
@@ -27,19 +28,24 @@ class BaseModel:
 
     def delete_checkpoints(self):
         if os.path.isdir(self.config.checkpoint_dir):
+            print("Deleting model checkpoints ...\n".format(self.config.checkpoint_dir))
             shutil.rmtree(self.config.checkpoint_dir)
             print('deleted whole checkpoint directory')
 
-    def init_global_step(self):
+    def _init_global_step(self):
         # DON'T forget to add the global step tensor to the tensorflow trainer
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
 
     # just initialize a tensorflow variable to use it as epoch counter
-    def init_cur_epoch(self):
+    def _init_cur_epoch(self):
         with tf.variable_scope('cur_epoch'):
             self.cur_epoch_tensor = tf.Variable(0, trainable=False, name='cur_epoch')
             self.increment_cur_epoch_tensor = tf.assign(self.cur_epoch_tensor, self.cur_epoch_tensor + 1)
+
+    def _init_best_loss(self):
+        with tf.variable_scope('best_loss'):
+            self.best_loss_tensor = tf.Variable(1e10, dtype=tf.float32, name='best_loss')
 
     def build(self):
         raise NotImplementedError
@@ -52,11 +58,6 @@ class BaseModel:
 
 
 class BaseTrainer:
-    """
-    Basic config:
-        - num_iter
-        - num_epochs
-    """
     def __init__(self, sess, model, data, config, logger=None):
         self.sess = sess
         self.model = model
@@ -75,7 +76,7 @@ class BaseTrainer:
             self.sess.run(self.model.increment_cur_epoch_tensor)
             if verbose:
                 print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess), self.model.global_step_tensor.eval(self.sess)))
-                print('train result:', result)
+                print('train epoch result:', result)
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):

@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
 
@@ -39,7 +40,7 @@ class DeepARModel(BaseModel):
                 z_prev = self.Z[:, t - 1]
             # Prediction range (still used for training but with drawn samples)
             else:
-                sample_z = tf.distributions.Normal(loc, scale).sample()
+                sample_z = tfp.distributions.Normal(loc, scale).sample()
                 self.sample_at_time.append(sample_z)
                 z_prev = sample_z
 

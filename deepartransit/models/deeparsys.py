@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
 
@@ -39,7 +40,7 @@ class DeepARSysModel(BaseModel):
             elif t < self.config.pretrans_length or t > (self.config.pretrans_length + self.config.trans_length):
                 z_prev = self.Z[:, t - 1]
             else: # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
-                sample_z = tf.distributions.Normal(loc, scale).sample()
+                sample_z = tfp.distributions.Normal(loc, scale).sample()
                 self.sample_at_time.append(sample_z)
                 z_prev = sample_z
 
@@ -73,9 +74,12 @@ class DeepARSysTrainer(BaseTrainer):
         for iteration in range(self.config.num_iter):
             loss = self.train_step()
             losses.append(loss)
+        self.model.global_step_tensor.eval(session=self.sess)
+
         loss_epoch = np.mean(losses)
-        self.model.global_step_tensor.eval(self.sess)
-        self.model.save(self.sess)
+        if loss_epoch < self.model.best_loss_tensor.eval(session=self.sess):
+            self.model.best_loss_tensor = tf.constant(loss_epoch, name='best_loss', dtype=tf.float32)
+            self.model.save(self.sess)
         return loss_epoch
 
     def train_step(self):
