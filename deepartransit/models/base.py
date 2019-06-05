@@ -5,6 +5,7 @@ class BaseModel:
     def __init__(self, config):
         self.config = config
         self.init_global_step()
+        self.init_cur_epoch()
 
     def init_saver(self):
         self.saver = tf.train.Saver(max_to_keep=5)
@@ -27,7 +28,7 @@ class BaseModel:
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
 
-        # just initialize a tensorflow variable to use it as epoch counter
+    # just initialize a tensorflow variable to use it as epoch counter
     def init_cur_epoch(self):
         with tf.variable_scope('cur_epoch'):
             self.cur_epoch_tensor = tf.Variable(0, trainable=False, name='cur_epoch')
@@ -56,14 +57,20 @@ class BaseTrainer:
         self.config = config
         self.logger = logger
 
-    def train(self):
+    def train(self, verbose=False):
         for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
-            self.train_epoch()
+            result = self.train_epoch()
             self.sess.run(self.model.increment_cur_epoch_tensor)
+            if verbose:
+                print('curr epoch :', self.model.cur_epoch_tensor.eval(self.sess))
+                print('train result:', result)
 
     def train_epoch(self):
-        for iteration in self.config.num_iter:
+        for iteration in range(self.config.num_iter):
             self.train_step()
+        cur_it = self.model.global_step_tensor.eval(self.sess)
+        #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        self.model.save(self.sess)
 
     def train_step(self):
         raise NotImplementedError
