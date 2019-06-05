@@ -27,6 +27,12 @@ class BaseModel:
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
 
+        # just initialize a tensorflow variable to use it as epoch counter
+    def init_cur_epoch(self):
+        with tf.variable_scope('cur_epoch'):
+            self.cur_epoch_tensor = tf.Variable(0, trainable=False, name='cur_epoch')
+            self.increment_cur_epoch_tensor = tf.assign(self.cur_epoch_tensor, self.cur_epoch_tensor + 1)
+
     def build(self):
         raise NotImplementedError
 
@@ -38,7 +44,12 @@ class BaseModel:
 
 
 class BaseTrainer:
-    def __init__(self, sess, model, data, config, logger):
+    """
+    Basic config:
+        - num_iter
+        - num_epochs
+    """
+    def __init__(self, sess, model, data, config, logger=None):
         self.sess = sess
         self.model = model
         self.data = data
@@ -46,10 +57,14 @@ class BaseTrainer:
         self.logger = logger
 
     def train(self):
-        raise NotImplementedError
+        for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
+            self.train_epoch()
+            self.sess.run(self.model.increment_cur_epoch_tensor)
 
     def train_epoch(self):
+        for iteration in self.config.num_iter:
+            self.train_step()
+
+    def train_step(self):
         raise NotImplementedError
-
-
 

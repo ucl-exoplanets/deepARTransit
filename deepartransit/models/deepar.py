@@ -16,7 +16,9 @@ num_layers
 cell_type
 cell_args
 num_iter
+num_epochs
 """
+
 class DeepARModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -68,16 +70,21 @@ class DeepARModel(BaseModel):
         with tf.name_scope("loss"):
             self.loss = tf.divide(loss, (self.config.cond_length + self.config.pred_length))
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate)
-            self.training_op = self.optimizer.minimize(loss)
+            self.train_step = self.optimizer.minimize(loss)
 
 
 class DeepARTrainer(BaseTrainer):
 
-    def __init__(self, sess, model, data, config, logger):
-        super().__init__(self, sess, model, data, config, logger)
-    def train_epoch(self):
-        for iteration in self.config.num_iter:
-            batch_Z, batch_X = self.data.next_batch(self.config.batch_size)
+    def __init__(self, sess, model, data, config, logger=None):
+        super().__init__(sess, model, data, config, logger=logger)
 
-            feed_dict = {self.Z: batch_Z, self.X: batch_X}
-            self.sess.run([self.model.train_step, self.model.loss], feed_dict=feed_dict)
+
+    #def train_epoch(self):
+    #    for iteration in self.config.num_iter:
+    #        self.train_step()
+
+    def train_step(self):
+        batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
+        self.sess.run([self.model.train_step, self.model.loss],
+                      feed_dict={self.model.Z: batch_Z, self.model.X: batch_X})
+        #return None

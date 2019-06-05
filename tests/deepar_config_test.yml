@@ -1,14 +1,19 @@
-checkpoint_dir: 'tests/models_checkpoint'
+checkpoint_dir: tests/models_checkpoint
 num_features: 1
-num_cov: 0
-batch_size: 16
+num_cov: 2
+batch_size: 1
 num_timesteps: 32
 cond_length: 16
 pred_length: 16
-learning_rate: 1e-3
+data_path: deepartransit/data/plc_22807808.npy
+cov_path: deepartransit/data/cent_22807808.npy
+test_length: 0
+learning_rate: 0.001
 num_traces: 5
 num_layers: 2
 hidden_units: 32
 cell_args: {}
-num_iter: 10
+num_iter: 5
+num_epoch: 2
 exp_name: exp_test
+
