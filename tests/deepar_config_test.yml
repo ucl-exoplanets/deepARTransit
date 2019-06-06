@@ -14,5 +14,5 @@ hidden_units: 2
 cell_args: {}
 num_iter: 2
 num_epochs: 2
-exp_name: test_deeparsys
+exp_name: deepar_test
 

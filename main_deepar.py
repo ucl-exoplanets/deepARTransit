@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pylab as plt
 from deepartransit.models import deepar
-from utils.config import process_config
+from utils.config import process_config, get_config_file
 from utils.dirs import create_dirs
 from utils.logger import Logger
 from utils.argumenting import get_args
@@ -16,7 +16,12 @@ if __name__ == '__main__':
 
     try:
         args = get_args()
-        config = process_config(args.config)
+        print(args.experiment)
+        if args.experiment:
+            config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment))
+        else:
+            config_file = args.config
+        config = process_config(config_file)
 
     except:
         print("missing or invalid arguments")
@@ -24,6 +29,8 @@ if __name__ == '__main__':
 
     model = deepar.DeepARModel(config)
     data = data_generator.DataGenerator(config)
+
+    create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
@@ -37,15 +44,19 @@ if __name__ == '__main__':
 
         trainer.train(verbose=True)
         samples = trainer.sample_on_test()
-    print(np.array(samples).shape)
+
+    # Saving output array
+    np.save(config.output_dir, 'pred_array.npy', np.array(samples))
+    print('prediction sample of shape {} saved'.format(np.array(samples).shape))
+
 
     Z_test, X_test = data.get_test_data()
-
     for pixel in range(samples.shape[1]):
-        plt.plot(Z_test[pixel, :, 0])
+        plt.plot(Z_test[pixel])
         for trace in range(samples.shape[0]):
             plt.plot(samples[trace, pixel, :, 0], color='orange')
         plt.axvline(config.cond_length, 0, 1, linestyle='dashed', color='red')
+        plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
         plt.show()
 
 

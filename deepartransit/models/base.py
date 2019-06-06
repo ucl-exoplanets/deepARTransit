@@ -82,6 +82,7 @@ class BaseTrainer:
             self.train_step()
         cur_it = self.model.global_step_tensor.eval(self.sess)
         self.logger.summarize(cur_it, summaries_dict={})
+        # TODO: fill the logger
         self.model.save(self.sess)
 
 

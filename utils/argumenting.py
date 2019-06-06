@@ -11,7 +11,6 @@ def get_args():
     argparser.add_argument(
         '-e', '--experiment',
         metavar='E',
-        default='None',
         help='The experiment name')
 
     args = argparser.parse_args()

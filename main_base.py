@@ -1,8 +1,9 @@
+import os
 import tensorflow as tf
 
 from deepartransit.data_handling.data_generator import DataGenerator
 from deepartransit.models.base import BaseModel, BaseTrainer
-from utils.config import process_config
+from utils.config import get_config_file, process_config
 from utils.dirs import create_dirs
 from utils.logger import Logger
 from utils.argumenting import get_args
@@ -13,7 +14,12 @@ def main():
     # then process the json configuration file
     try:
         args = get_args()
-        config = process_config(args.config)
+        print(args.experiment)
+        if args.experiment:
+            config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment))
+        else:
+            config_file = args.config
+        config = process_config(config_file)
 
     except:
         print("missing or invalid arguments")

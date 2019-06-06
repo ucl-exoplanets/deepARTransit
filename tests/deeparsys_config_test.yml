@@ -1,5 +1,5 @@
 # Experiment name
-exp_name: deepar_test
+exp_name: deeparsys_test
 
 # Data
 data_path: deepartransit/data_handling/plc_22807808.npy
