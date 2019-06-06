@@ -3,32 +3,41 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pylab as plt
 from deepartransit.models import deepar
-from deepartransit.utils.config import process_config
-from deepartransit.data import dataset
+from utils.config import process_config
+from utils.dirs import create_dirs
+from utils.logger import Logger
+from utils.argumenting import get_args
+from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 if __name__ == '__main__':
-    config_path = os.path.join('deepartransit','experiments', 'deepar_dev','deepar_config.yml')
-    config = process_config(config_path)
+    #config_path = os.path.join('deepartransit','experiments', 'deepar_dev','deepar_config.yml')
+
+    try:
+        args = get_args()
+        config = process_config(args.config)
+
+    except:
+        print("missing or invalid arguments")
+        exit(0)
+
     model = deepar.DeepARModel(config)
-    data = dataset.DataGenerator(config)
+    data = data_generator.DataGenerator(config)
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-        trainer = deepar.DeepARTrainer(sess, model, data, config)
-        #model.delete_checkpoints()
-        model.load(sess)
-        trainer.train(add_epochs=3, verbose=True)
+        logger = Logger(sess, config)
+        trainer = deepar.DeepARTrainer(sess, model, data, config, logger)
 
-        #Z_test, X_test = data.get_test_data()
-        #print(Z_test.shape, X_test.shape)
-        #samples = sess.run(model.loc_at_time, feed_dict={model.Z: Z_test, model.X: X_test})
+        if trainer.config.from_scratch:
+            model.delete_checkpoints()
+        model.load(sess)
+
+        trainer.train(verbose=True)
         samples = trainer.sample_on_test()
     print(np.array(samples).shape)
-
-
 
     Z_test, X_test = data.get_test_data()
 

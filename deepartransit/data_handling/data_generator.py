@@ -60,14 +60,14 @@ class DataGenerator:
             assert self.config.num_features == self.Z.shape[-1]
             assert self.config.num_cov == self.X.shape[-1]
         except AssertionError:
-            print('inconsistency between data and config dimensions')
+            print('inconsistency between data_handling and config dimensions')
             self.Z = None
             self.X = None
             return -1
 
 if __name__ == '__main__':
-    config_dict = {'data_path': '../data/plc_22807808.npy',
-                   'cov_path': '../data/cent_22807808.npy'}
+    config_dict = {'data_path': '../data_handling/plc_22807808.npy',
+                   'cov_path': '../data_handling/cent_22807808.npy'}
     config = Bunch(config_dict)
 
     DG = DataGenerator(config)

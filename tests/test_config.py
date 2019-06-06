@@ -1,6 +1,5 @@
 import os
-import tensorflow as tf
-from deepartransit.utils.config import process_config
+from utils.config import process_config
 
 
 config_file = os.path.join('tests', 'deepar_config_test.yml')

@@ -1,9 +1,9 @@
 import os
 import tensorflow as tf
-import yaml
 from deepartransit.models import deeparsys
-from deepartransit.utils.config import process_config
-from deepartransit.data import dataset
+from utils.config import process_config
+from utils.dirs import create_dirs
+from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 config_path = os.path.join('tests', 'deeparsys_config_test.yml')
@@ -11,9 +11,10 @@ config_path = os.path.join('tests', 'deeparsys_config_test.yml')
 
 def test_deepar_init():
     config = process_config(config_path)
+    create_dirs([config.summary_dir, config.checkpoint_dir])
     model = deeparsys.DeepARSysModel(config)
     model.delete_checkpoints()
-    data = dataset.DataGenerator(config)
+    data = data_generator.DataGenerator(config)
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:

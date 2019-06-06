@@ -3,16 +3,26 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pylab as plt
 from deepartransit.models import deeparsys
-from deepartransit.utils.config import process_config
-from deepartransit.data import dataset
+from utils.config import process_config
+from utils.dirs import create_dirs
+from utils.logger import Logger
+from utils.argumenting import get_args
+from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 if __name__ == '__main__':
-    config_path = os.path.join('deepartransit','experiments', 'deeparsys_dev','deeparsys_config.yml')
-    config = process_config(config_path)
+    #config_path = os.path.join('deepartransit','experiments', 'deeparsys_dev','deeparsys_config.yml')
+    try:
+        args = get_args()
+        config = process_config(args.config)
+
+    except:
+        print("missing or invalid arguments")
+        exit(0)
+
     model = deeparsys.DeepARSysModel(config)
-    data = dataset.DataGenerator(config)
+    data = data_generator.DataGenerator(config)
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
@@ -21,7 +31,7 @@ if __name__ == '__main__':
         if trainer.config.from_scratch:
             model.delete_checkpoints()
         model.load(sess)
-        trainer.train(add_epochs=trainer.config.add_epochs, verbose=True)
+        trainer.train(verbose=True)
         samples = trainer.sample_sys_traces()
     print(np.array(samples).shape)
 

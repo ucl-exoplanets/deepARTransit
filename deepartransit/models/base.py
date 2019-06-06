@@ -24,7 +24,7 @@ class BaseModel:
         if latest_checkpoint:
             print("Loading model checkpoint {} ...\n".format(latest_checkpoint))
             self.saver.restore(sess, latest_checkpoint)
-            print("Model loaded from {}".format(self.global_step_tensor.eval(sess)))
+            print("Model loaded from step {}".format(self.global_step_tensor.eval(sess)))
 
     def delete_checkpoints(self):
         if os.path.isdir(self.config.checkpoint_dir):
@@ -65,13 +65,12 @@ class BaseTrainer:
         self.config = config
         self.logger = logger
 
-    def train(self, add_epochs=0, verbose=False):
+    def train(self, verbose=False):
         curr_epoch = self.model.cur_epoch_tensor.eval(self.sess)
-        total_to_train = max(self.config.num_epochs, curr_epoch) + add_epochs
-        if curr_epoch >= total_to_train:
-            print('model already trained for {} epochs (>= {})'.format(curr_epoch, total_to_train))
+        if curr_epoch >= self.config.num_epochs:
+            print('model already trained for {} epochs (>= {})'.format(curr_epoch, self.config.num_epochs))
             return 0
-        for cur_epoch in range(curr_epoch, total_to_train):
+        for cur_epoch in range(curr_epoch, self.config.num_epochs):
             result = self.train_epoch()
             self.sess.run(self.model.increment_cur_epoch_tensor)
             if verbose:
@@ -82,7 +81,7 @@ class BaseTrainer:
         for iteration in range(self.config.num_iter):
             self.train_step()
         cur_it = self.model.global_step_tensor.eval(self.sess)
-        #self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        self.logger.summarize(cur_it, summaries_dict={})
         self.model.save(self.sess)
 
 
