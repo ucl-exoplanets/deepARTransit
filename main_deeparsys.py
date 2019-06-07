@@ -17,9 +17,12 @@ if __name__ == '__main__':
         args = get_args()
         print(args.experiment)
         if args.experiment:
+            print('found an experiment argument:', args.experiment)
             config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment))
+            print("which constains a config file", config_file)
         else:
             config_file = args.config
+        print('processing the config from the config file')
         config = process_config(config_file)
 
     except:
@@ -43,15 +46,17 @@ if __name__ == '__main__':
         samples = trainer.sample_sys_traces()
 
     # Saving output array
-    np.save(config.output_dir, 'pred_array.npy', np.array(samples))
+    np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
     print('prediction sample of shape {} saved'.format(np.array(samples).shape))
 
     # Look at predictions on 'transit' range
     t1 = model.config.pretrans_length
     t2 = t1 + model.config.trans_length
     t3 = t2 + model.config.postrans_length
+
     plt.figure()
     for pixel in range(samples.shape[1]):
+        plt.clf()
         plt.plot(data.Z[pixel, :, 0], label='ground truth', color='blue')
         plt.plot(data.X[pixel], color='grey', linewidth=1, linestyle='dashed', label='centroid')
         for trace in range(samples.shape[0]):
@@ -62,4 +67,4 @@ if __name__ == '__main__':
         plt.xlim(0, t3)
         plt.legend()
         plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
-        plt.show()
+        #plt.show()
