@@ -4,6 +4,7 @@ from deepartransit.models import deepar
 from utils.config import process_config
 from deepartransit.data_handling import data_generator
 from utils.dirs import create_dirs
+from utils.logger import Logger
 
 config_path = os.path.join('tests', 'deepar_config_test.yml')
 
@@ -19,7 +20,8 @@ def test_deepar_init():
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-        trainer = deepar.DeepARTrainer(sess, model, data, config)
+        logger = Logger(sess, config)
+        trainer = deepar.DeepARTrainer(sess, model, data, config, logger)
         trainer.train()
 
 """

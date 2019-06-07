@@ -75,7 +75,13 @@ class DeepARTrainer(BaseTrainer):
             loss = self.train_step()
             losses.append(loss)
         loss_epoch = np.mean(losses)
-        self.model.global_step_tensor.eval(self.sess)
+
+        cur_it = self.model.global_step_tensor.eval(self.sess)
+        summaries_dict = {
+            'loss': loss_epoch
+        }
+
+        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
         self.model.save(self.sess)
         return loss_epoch
 
