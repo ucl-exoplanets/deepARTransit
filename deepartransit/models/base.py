@@ -30,7 +30,10 @@ class BaseModel:
         if os.path.isdir(self.config.checkpoint_dir):
             print("Deleting model checkpoints ...\n".format(self.config.checkpoint_dir))
             shutil.rmtree(self.config.checkpoint_dir)
-            print('deleted whole checkpoint directory')
+            shutil.rmtree(self.config.output_dir)
+            shutil.rmtree(self.config.summary_dir)
+            shutil.rmtree(self.config.plots_dir)
+            print('deleted whole checkpoint, output and plots directory')
 
     def _init_global_step(self):
         # DON'T forget to add the global step tensor to the tensorflow trainer

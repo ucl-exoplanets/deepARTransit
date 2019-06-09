@@ -22,17 +22,17 @@ class DeepARTransModel(BaseModel):
         self.alpha = tf.placeholder(shape=(self.config.batch_size,), name='scaled_center', dtype=tf.float32)
 
         # Transit
-        self.trans_par = tf.Variable(initial_value=self.config.initial_trans_pars, dtype=tf.float32,
-                                        name='transit_params', trainable=True)
+        self.trans_pars = tf.Variable(initial_value=self.config.initial_trans_pars, dtype=tf.float32,
+                                      name='transit_params', trainable=True)
 
         self.time_array = tf.Variable(np.linspace(0., 1., self.config.trans_length),
                              name='transit', dtype=tf.float32, trainable=False)
 
-        self.delta = self.transit_linear_tf(self.time_array, self.trans_par)
+        self.Y = self.transit_linear_tf(self.time_array, self.trans_pars)
 
 
 
-        self.loc_at_time = []
+        self.pred_at_time = []
         self.scale_at_time = []
         self.sample_at_time = []
         rnn_at_layer = []
@@ -44,6 +44,8 @@ class DeepARTransModel(BaseModel):
         loc_decoder = tf.layers.Dense(1)
         scale_decoder = tf.layers.Dense(1, activation='sigmoid')
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
+        loss_out = tf.Variable(0., dtype=tf.float32, name='loss_out')
+        loss_trans = tf.Variable(0., dtype=tf.float32, name='loss_trans')
 
         for t in range(self.config.pretrans_length + self.config.trans_length + self.config.postrans_length):
             # initialization of input z_0 with zero
@@ -65,21 +67,27 @@ class DeepARTransModel(BaseModel):
 
             if t < self.config.pretrans_length or (t >= self.config.pretrans_length +
                                                    self.config.trans_length):
-                pred_z = loc
+                z_hat = loc
+                likelihood = super().gaussian_likelihood(scale)(self.Z[:, t], z_hat)
+                loss_out = tf.add(loss_out, likelihood)
             else:
-                delta_t = self.delta[t - self.config.pretrans_length]
-
-                pred_z = tf.scalar_mul(delta_t, loc)   + tf.scalar_mul((delta_t - 1), self.alpha)
-            likelihood = super().gaussian_likelihood(scale)(self.Z[:, t], pred_z)
+                delta_t = self.Y[t - self.config.pretrans_length]
+                z_hat = tf.add(tf.scalar_mul(delta_t, loc), tf.scalar_mul((delta_t - 1), self.alpha))
+                likelihood = super().gaussian_likelihood(scale)(self.Z[:, t], z_hat)
+                loss_trans = tf.add(loss_trans, likelihood)
             loss = tf.add(loss, likelihood)
 
-            self.loc_at_time.append(loc)
+            self.pred_at_time.append(z_hat)
             self.scale_at_time.append(scale)
 
         with tf.name_scope("loss"):
-            self.loss = tf.math.divide(loss, (self.config.pretrans_length + self.config.pretrans_length + self.config.postrans_length))
+            self.loss_out = tf.math.divide(loss_out, (self.config.pretrans_length + self.config.trans_length + self.config.postrans_length))
+            self.loss_trans = tf.math.divide(loss_trans, (self.config.pretrans_length + self.config.trans_length + self.config.postrans_length))
+            self.loss = tf.math.divide(loss, (self.config.pretrans_length + self.config.trans_length + self.config.postrans_length))
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate)
             self.train_step = self.optimizer.minimize(loss, global_step=self.global_step_tensor)
+            self.train_step_out = self.optimizer.minimize(loss_out, global_step=self.global_step_tensor)
+
 
     @staticmethod
     def transit_linear_tf(time_array, input_pars):
@@ -102,27 +110,51 @@ class DeepARTransTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None):
         super().__init__(sess, model, data, config, logger=logger)
 
-    def train_epoch(self):
-        losses = []
-        for iteration in range(self.config.num_iter):
-            loss = self.train_step()
-            losses.append(loss)
-        self.model.global_step_tensor.eval(session=self.sess)
-
-        loss_epoch = np.mean(losses)
-        if loss_epoch < self.model.best_loss_tensor.eval(session=self.sess):
-            self.model.best_loss_tensor = tf.constant(loss_epoch, name='best_loss', dtype=tf.float32)
-            self.model.save(self.sess)
-
-        # TODO: Log the loss and transit params
-        return loss_epoch
-
-    def train_step(self):
+    def train_epoch(self, trans=False):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
         feed_dict = {self.model.Z: batch_Z, self.model.X: batch_X,
                      self.model.alpha: (self.data.scaler_Z.centers / self.data.scaler_Z.norms).squeeze((1,2))}
-        _, loss = self.sess.run([self.model.train_step, self.model.loss], feed_dict= feed_dict)
-        return loss
+
+        if trans:
+            train_op = self.model.train_step
+        else:
+            train_op = self.model.train_step_out
+        _, loss, loss_out, loss_trans, trans_pars = self.sess.run([train_op, self.model.loss, self.model.loss_out, self.model.loss_trans,
+                                                                   self.model.trans_pars], feed_dict= feed_dict)
+
+        cur_it = self.model.global_step_tensor.eval(self.sess)
+        summaries_dict = {
+                'loss': loss,
+                'loss_out': loss_out,
+                'loss_trans': loss_trans,
+                't_c': trans_pars[0],
+                'delta': trans_pars[1],
+                'T':trans_pars[2],
+                'tau':trans_pars[3],
+        }
+
+        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        self.model.save(self.sess)
+        return loss, loss_out, loss_trans
+
+    def train(self, verbose=False):
+        curr_epoch = self.model.cur_epoch_tensor.eval(self.sess)
+        if curr_epoch >= self.config.num_epochs:
+            print('model already trained for {} epochs (>= {})'.format(curr_epoch, self.config.num_epochs))
+            return 0
+        for cur_epoch in range(curr_epoch, self.config.num_epochs):
+            if verbose:
+                print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess),
+                                                                 self.model.global_step_tensor.eval(self.sess)))
+            if curr_epoch <= self.config.num_epochs_out:
+                result = self.train_epoch()
+            else:
+                result = self.train_epoch(trans=True)
+                if verbose:
+                    print('training with transit')
+            self.sess.run(self.model.increment_cur_epoch_tensor)
+            if verbose:
+                print('train epoch result:', result)
 
     def sample_sys_traces(self):
         samples_cond_test = np.zeros(shape=(self.config.num_traces, self.config.batch_size,

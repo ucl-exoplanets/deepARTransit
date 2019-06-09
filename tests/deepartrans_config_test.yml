@@ -30,6 +30,7 @@ num_traces: 2
 # Training
 from_scratch: True ############# SPECIAL WARNING TO THIS BOOLEAN VALUE WHICH MAY DELETE CHECK
 num_epochs: 2
+num_epochs_out: 1
 num_iter: 1 # TODO: extract form data_handling structure itself?
 learning_rate: 0.001
 

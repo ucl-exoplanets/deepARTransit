@@ -4,6 +4,7 @@ from deepartransit.models import deepartrans
 from utils.config import process_config
 from utils.dirs import create_dirs
 from deepartransit.data_handling import data_generator
+from utils.logger import Logger
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 config_path = os.path.join('tests', 'deepartrans_config_test.yml')
@@ -19,8 +20,8 @@ def test_deepar_init():
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-        trainer = deepartrans.DeepARTransTrainer(sess, model, data, config)
-        trainer.train_step()
+        logger = Logger(sess, config)
+        trainer = deepartrans.DeepARTransTrainer(sess, model, data, config, logger)
 
         model.load(sess)
         trainer.train()
