@@ -7,6 +7,7 @@ from utils.config import get_config_file, process_config
 from utils.dirs import create_dirs
 from utils.logger import Logger
 from utils.argumenting import get_args
+from utils.transit import transit_linear
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -37,21 +38,25 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
+
+        if config.from_scratch:
+            model.delete_checkpoints()
+            create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
+        else:
+            model.load(sess)
         logger = Logger(sess, config)
         trainer = deepartrans.DeepARTransTrainer(sess, model, data, config, logger)
-        if trainer.config.from_scratch:
-            model.delete_checkpoints()
-        model.load(sess)
+
         trainer.train(verbose=True)
         samples = trainer.sample_sys_traces()
-        trans_pars = model.trans_par.eval(sess)
+        trans_pars = model.trans_pars.eval(sess)
         #delta = model.delta.eval(sess)
-    print('transit params', trans_pars)
 
-    # Saving output array
+    # Saving output arrays
     np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
-    #np.save(os.path.join(config.output_dir, 'pred_ar.npy'), np.array(samples))
     print('prediction sample of shape {} saved'.format(np.array(samples).shape))
+    np.save(os.path.join(config.output_dir, 'trans_pars.npy'), np.array(trans_pars))
+    print("predicted transit params {} saved".format(trans_pars))
 
     # Look at predictions on 'transit' range
     t1 = model.config.pretrans_length
