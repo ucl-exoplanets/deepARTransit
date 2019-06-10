@@ -1,14 +1,16 @@
 import numpy as np
 import os
+import sys
+sys.path.append('../../../Dropbox/UCL/PHD/projects/spitzer_light_curves')
 
 if os.getcwd().split('/')[-1] != 'spitzer_light_curves':
     print(os.getcwd().split('/')[-1])
     os.chdir('..')
-import utilities as utils
 from observation import Observation
+from utilities import load_data
 
 def create_dataset(aorkey='22807808', channel=4, radius=2):
-    dates, data_array, header = utils.load_data(aorkey, channel)
+    dates, data_array, header = load_data(aorkey, channel, parent_dir='')
     obs = Observation(aorkey, channel, header, dates, data_array, radius=radius, planet='none')
 
     obs.preprocess()
@@ -28,5 +30,5 @@ if __name__ == '__main__':
     data, cent_cov = create_dataset()
     print(data.shape, cent_cov.shape)
 
-    np.save('plc_{}.npy'.format(aorkey), data)
-    np.save('cent_{}.npy'.format(aorkey), cent_cov)
+    #np.save('plc_{}.npy'.format(aorkey), data)
+    #np.save('cent_{}.npy'.format(aorkey), cent_cov)
