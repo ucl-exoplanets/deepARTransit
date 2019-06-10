@@ -32,16 +32,18 @@ if __name__ == '__main__':
     model = deeparsys.DeepARSysModel(config)
     data = data_generator.DataGenerator(config)
 
+    if config.from_scratch:
+        model.delete_checkpoints()
+
     create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
+
+        model.load(sess)
         logger = Logger(sess, config)
         trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger)
-        if trainer.config.from_scratch:
-            model.delete_checkpoints()
-        model.load(sess)
         trainer.train(verbose=True)
         samples = trainer.sample_sys_traces()
 
