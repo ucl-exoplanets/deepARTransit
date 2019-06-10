@@ -134,7 +134,9 @@ class DeepARTransTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        self.model.save(self.sess)
+        if loss < self.model.best_loss_tensor.eval(self.sess):
+            self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
+            self.model.save(self.sess)
         return loss, loss_out, loss_trans
 
     def train(self, verbose=False):
@@ -144,9 +146,9 @@ class DeepARTransTrainer(BaseTrainer):
             return 0
         for cur_epoch in range(curr_epoch, self.config.num_epochs):
             if verbose:
-                print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess),
+                print('curr epoch : {} (global step: {})'.format(cur_epoch,
                                                                  self.model.global_step_tensor.eval(self.sess)))
-            if curr_epoch <= self.config.num_epochs_out:
+            if cur_epoch <= self.config.num_epochs_out:
                 result = self.train_epoch()
             else:
                 result = self.train_epoch(trans=True)
