@@ -1,2 +1,3 @@
 deepartransit/experiments/*
 run/*
+*.npy
