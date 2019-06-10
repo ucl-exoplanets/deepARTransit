@@ -33,17 +33,17 @@ if __name__ == '__main__':
     model = deepartrans.DeepARTransModel(config)
     data = data_generator.DataGenerator(config)
 
+    if config.from_scratch:
+        model.delete_checkpoints()
+
     create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
 
-        if config.from_scratch:
-            model.delete_checkpoints()
-            create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
-        else:
-            model.load(sess)
+
+        model.load(sess)
         logger = Logger(sess, config)
         trainer = deepartrans.DeepARTransTrainer(sess, model, data, config, logger)
 
@@ -68,7 +68,6 @@ if __name__ == '__main__':
         plt.clf()
         plt.plot(data.Z[pixel, :, 0], label='ground truth', color='blue')
         plt.plot(data.X[pixel], color='grey', linewidth=1, linestyle='dashed', label='centroid')
-        #@plt.plot(range(config.pretrans_length, config.pretrans_length+ config.trans_length), )
         for trace in range(samples.shape[0]):
             plt.plot(range(t1, t2 +1), samples[trace, pixel, :, 0], alpha=0.3, linewidth=1)
         plt.plot(range(t1, t2 + 1), samples[:, pixel, :, 0].mean(axis=0), linestyle=':', color='red', linewidth=4)
@@ -77,4 +76,3 @@ if __name__ == '__main__':
         plt.xlim(0, t3)
         plt.legend()
         plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
-        #plt.show()
