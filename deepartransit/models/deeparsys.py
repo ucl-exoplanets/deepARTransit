@@ -27,7 +27,8 @@ class DeepARSysModel(BaseModel):
         state_at_layer = []
         for _ in range(self.config.num_layers):
             rnn_at_layer.append(tf.nn.rnn_cell.LSTMCell(self.config.hidden_units, **self.config.cell_args))
-            state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32))
+            #state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
+            state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
 
         loc_decoder = tf.layers.Dense(1)
         scale_decoder = tf.layers.Dense(1, activation='sigmoid')
@@ -82,7 +83,9 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        self.model.save(self.sess)
+        if cur_it > int(0.5 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
+            self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
+            self.model.save(self.sess)
         return loss_epoch
 
     def train_step(self):
