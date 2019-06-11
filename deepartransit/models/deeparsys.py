@@ -45,7 +45,10 @@ class DeepARSysModel(BaseModel):
                 self.sample_at_time.append(sample_z)
                 z_prev = sample_z
 
-            temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
+            if self.config.num_cov:
+                temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
+            else:
+                temp_input = z_prev
             for layer in range(self.config.num_layers):
                 temp_input, state_at_layer[layer] = rnn_at_layer[layer](temp_input, state_at_layer[layer])
 
