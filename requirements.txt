@@ -1,8 +1,7 @@
-tensorflow_probability==0.6.0
-scipy==1.2.1
-tensorflow==1.13.1
-bunch==1.0.1
 matplotlib==3.1.0
-pixlc==0.0.1
+bunch==1.0.1
+tensorflow_probability==0.6.0
 numpy==1.16.4
+pixlc==0.0.2
+tensorflow==1.13.1
 PyYAML==5.1.1
