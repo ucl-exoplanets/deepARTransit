@@ -69,16 +69,21 @@ class BaseTrainer:
         self.logger = logger
 
     def train(self, verbose=False):
-        curr_epoch = self.model.cur_epoch_tensor.eval(self.sess)
-        if curr_epoch >= self.config.num_epochs:
-            print('model already trained for {} epochs (>= {})'.format(curr_epoch, self.config.num_epochs))
+        initial_epoch = self.model.cur_epoch_tensor.eval(self.sess)
+        if initial_epoch >= self.config.num_epochs:
+            print('model already trained for {} epochs (>= {})'.format(initial_epoch, self.config.num_epochs))
             return 0
-        for cur_epoch in range(curr_epoch, self.config.num_epochs):
+        for cur_epoch in range(initial_epoch, self.config.num_epochs):
             result = self.train_epoch()
-            self.sess.run(self.model.increment_cur_epoch_tensor)
             if verbose:
-                print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess), self.model.global_step_tensor.eval(self.sess)))
+                print('curr epoch : {} (global step: {})'.format(self.model.cur_epoch_tensor.eval(self.sess),
+                                                                 self.model.global_step_tensor.eval(self.sess)))
                 print('train epoch result:', result)
+            if (cur_epoch + 1) % int(self.config.freq_eval) == 0:
+                print('evaluation step')
+                self.eval_step()
+
+            self.sess.run(self.model.increment_cur_epoch_tensor)
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):

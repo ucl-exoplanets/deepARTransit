@@ -1,13 +1,15 @@
+import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
+from utils.transit import transit_linear, fit_transit_linear
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
 """
-
+#TODO: reformat for pixels as features
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -86,7 +88,7 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        if cur_it > int(0.5 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
+        if cur_it > int(0.80 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
             self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
             self.model.save(self.sess)
         return loss_epoch
@@ -105,3 +107,44 @@ class DeepARSysTrainer(BaseTrainer):
                 self.sess.run(self.model.sample_at_time, feed_dict={self.model.Z: self.data.Z,
                                                                     self.model.X: self.data.X})).swapaxes(0, 1)
         return samples_cond_test
+
+    def eval_step(self):
+        cur_it = self.model.global_step_tensor.eval(self.sess)
+        feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
+        # save locs and scales predictions
+        locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
+        np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
+                np.array(locs))
+        np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
+                np.array(locs))
+
+        # Predict and save traces
+        sampled_traces = self.sample_sys_traces()
+        np.save(os.path.join(self.config.output_dir, 'pred_array_{}.npy'.format(cur_it)),
+                np.array(sampled_traces))
+
+        # Fit transit
+        #################
+        l1 = self.config.pretrans_length
+        l2 = self.config.trans_length
+        #print(self.data.Z.shape, sampled_traces.shape)
+        time_array = np.linspace(0, 1, l2 + 1)
+        transit_component = self.data.Z[:, l1:l1+l2 +1] / sampled_traces.mean(axis=0)
+        t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=time_array,
+                                                repeat=self.config.batch_size)
+
+        # compute metrics
+        ###############
+        # TODO: CHECK
+        mse_transit = np.mean((transit_linear(time_array, t_c, delta, T, tau) - transit_component)**2)
+
+        # TENSORBOARD eval summary
+        summaries_dict = {
+                          't_c': np.array(t_c),
+                          'delta': np.array(delta),
+                          'T': np.array(T),
+                          'tau': np.array(tau),
+                          'mse_transit': np.array(mse_transit)
+        }
+
+        self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
