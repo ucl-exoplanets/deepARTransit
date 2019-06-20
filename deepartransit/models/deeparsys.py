@@ -129,14 +129,17 @@ class DeepARSysTrainer(BaseTrainer):
         l2 = self.config.trans_length
         #print(self.data.Z.shape, sampled_traces.shape)
         time_array = np.linspace(0, 1, l2 + 1)
-        transit_component = self.data.Z[:, l1:l1+l2 +1] / sampled_traces.mean(axis=0)
+        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, l1:l1+l2 +1]) /
+                             self.data.scaler_Z.inverse_transform(sampled_traces.mean(axis=0)))
         t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=time_array,
                                                 repeat=self.config.batch_size)
 
         # compute metrics
         ###############
         # TODO: CHECK
-        mse_transit = np.mean((transit_linear(time_array, t_c, delta, T, tau) - transit_component)**2)
+        transit_fit_rep = np.expand_dims(transit_linear(time_array, t_c, delta, T, tau), -1).repeat(self.config.batch_size, -1)
+
+        mse_transit = ((transit_component.T - transit_fit_rep)**2).mean()
 
         # TENSORBOARD eval summary
         summaries_dict = {
