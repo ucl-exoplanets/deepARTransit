@@ -15,4 +15,4 @@ cell_args: {}
 num_iter: 2
 num_epochs: 2
 exp_name: deepar_test
-
+freq_eval: 10000

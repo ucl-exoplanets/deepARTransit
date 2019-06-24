@@ -35,8 +35,5 @@ num_iter: 1 # TODO: extract form data_handling structure itself?
 learning_rate: 0.001
 
 
-
-
-
-
-
+#
+freq_eval: 100000
