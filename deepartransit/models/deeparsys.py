@@ -117,7 +117,8 @@ class DeepARSysTrainer(BaseTrainer):
         np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
                 np.array(locs))
         np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
-                np.array(locs))
+                np.array(scales))
+
 
         # Predict and save traces
         sampled_traces = self.sample_sys_traces()
@@ -134,6 +135,9 @@ class DeepARSysTrainer(BaseTrainer):
                              self.data.scaler_Z.inverse_transform(sampled_traces.mean(axis=0)))
         t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=time_array,
                                                 repeat=self.config.batch_size)
+        # saving transit parameters
+        np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
+                np.array([t_c,delta, T, tau]))
 
         # compute metrics
         ###############
