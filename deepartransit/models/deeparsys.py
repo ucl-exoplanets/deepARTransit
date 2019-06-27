@@ -88,8 +88,9 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        if cur_it > int(0.80 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
-            self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
+        #if cur_it > int(0.80 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
+        #self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
+        if cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
         return loss_epoch
 
