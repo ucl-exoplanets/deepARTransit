@@ -69,7 +69,7 @@ class BaseTrainer:
         self.logger = logger
 
     def train(self, verbose=False):
-        initial_epoch = self.model.cur_epoch_tensor.eval(self.sess)
+        initial_epoch = self.model.global_step_tensor.eval(self.sess)
         if initial_epoch >= self.config.num_epochs:
             print('model already trained for {} epochs (>= {})'.format(initial_epoch, self.config.num_epochs))
             return 0
