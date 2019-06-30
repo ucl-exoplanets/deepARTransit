@@ -14,7 +14,11 @@ class DataGenerator:
             if len(self.X) == 1:
                 self.X = np.repeat(self.X, len(self.Z), axis=0)
             self._check_consistency()
-
+        try:
+            self.time_array = np.load(self.config.time_path)
+        except:
+            print("time_path parameter not found in config. Default to 0,1,2....T-1")
+            self.time_array = np.arange(self.Z.shape[1])
         if self.config.rescaling:
             self._scale()
 

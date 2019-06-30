@@ -1,4 +1,5 @@
 import os
+from timeit import default_timer as timer
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -109,40 +110,46 @@ class DeepARSysTrainer(BaseTrainer):
                                                                     self.model.X: self.data.X})).swapaxes(0, 1)
         return samples_cond_test
 
-    def eval_step(self):
+    def eval_step(self, verbose=True):
         cur_it = self.model.global_step_tensor.eval(self.sess)
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
         # save locs and scales predictions
+
+        t1 = timer()
         locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
         np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
                 np.array(locs))
         np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
                 np.array(scales))
-
+        t2 = timer()
 
         # Predict and save traces
         sampled_traces = self.sample_sys_traces()
         np.save(os.path.join(self.config.output_dir, 'pred_array_{}.npy'.format(cur_it)),
                 np.array(sampled_traces))
-
+        t3 = timer()
         # Fit transit
         #################
         l1 = self.config.pretrans_length
         l2 = self.config.trans_length
         #print(self.data.Z.shape, sampled_traces.shape)
-        time_array = np.linspace(0, 1, l2 + 1)
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, l1:l1+l2 +1]) /
+
+        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, l1:l1+l2+1]) /
                              self.data.scaler_Z.inverse_transform(sampled_traces.mean(axis=0)))
-        t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=time_array,
+        print(self.data.time_array)
+        t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[l1:l1+l2+1],
                                                 repeat=self.config.batch_size)
+        print(self.data.Z[:, l1:l1+l2+1].shape, transit_component.shape, sampled_traces.mean(0).shape)
+        print(t_c, delta, T, tau)
+        t4 = timer()
         # saving transit parameters
         np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
                 np.array([t_c,delta, T, tau]))
 
         # compute metrics
         ###############
-        # TODO: CHECK
-        transit_fit_rep = np.expand_dims(transit_linear(time_array, t_c, delta, T, tau), -1).repeat(self.config.batch_size, -1)
+        #TODO: change the repeat provisional thing...
+        transit_fit_rep = np.expand_dims(transit_linear(self.data.time_array[l1:l1+l2 +1], t_c, delta, T, tau), -1).repeat(self.config.batch_size, -1)
 
         mse_transit = ((transit_component.T - transit_fit_rep)**2).mean()
 
@@ -156,3 +163,12 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
+        if verbose:
+            print('STEP (global) {}:\n\tEvaluation: mse_transit = {:0.5f}\n'.format(cur_it, mse_transit)
+                  + '\tSaving predictions vector and fitted transit parameters\n'
+                  + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
+
+    def _update_ranges(self, t_c, delta, T, tau):
+        self.trans_length = (T + delta) + (T + tau) * 0.1 # 0.1 : 10% margin around the transit
+        self.pretrans_length = int(np.floor(t_c - self.trans_length // 2))
+        self.postrans_length = int(np.floor(t_c + self.trans_length // 2))
