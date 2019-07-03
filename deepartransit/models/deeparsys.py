@@ -136,11 +136,9 @@ class DeepARSysTrainer(BaseTrainer):
 
         transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, l1:l1+l2+1]) /
                              self.data.scaler_Z.inverse_transform(sampled_traces.mean(axis=0)))
-        print(self.data.time_array)
         t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[l1:l1+l2+1],
                                                 repeat=self.config.batch_size)
-        print(self.data.Z[:, l1:l1+l2+1].shape, transit_component.shape, sampled_traces.mean(0).shape)
-        print(t_c, delta, T, tau)
+        #print(t_c, delta, T, tau)
         t4 = timer()
         # saving transit parameters
         np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
@@ -168,6 +166,7 @@ class DeepARSysTrainer(BaseTrainer):
                   + '\tSaving predictions vector and fitted transit parameters\n'
                   + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
 
+        return timer() - t1
     def _update_ranges(self, t_c, delta, T, tau):
         self.trans_length = (T + delta) + (T + tau) * 0.1 # 0.1 : 10% margin around the transit
         self.pretrans_length = int(np.floor(t_c - self.trans_length // 2))
