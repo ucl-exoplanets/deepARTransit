@@ -20,17 +20,18 @@ cell_args: {}
 
 # Algo
 num_traces: 2
+adapt_ranges: True
 
 # Training
 from_scratch: True
-num_epochs: 2
+num_epochs: 20
 num_iter: 1 # TODO: extract form data_handling structure itself?
 learning_rate: 0.001
 batch_size: 1 # TODO: add default behaviour when batch_size=0
 
 
 # Evaluation
-freq_eval: 100000
+freq_eval: 5
 
 
 

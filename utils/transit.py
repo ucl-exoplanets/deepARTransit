@@ -61,9 +61,12 @@ class Transit:
 
     def _get_duration(self):
         raise NotImplementedError
+    def _get_t_c(self):
+        raise NotImplementedError
 
     flux = property(get_flux)
     duration = property(_get_duration)
+    t_c = property(_get_t_c)
 
 class LinearTransit(Transit):
     def __init__(self, time_array, transit_pars=None):
@@ -99,7 +102,11 @@ class LinearTransit(Transit):
         T, tau = self.transit_pars[-2:]
         return (T + tau)
 
+    def _get_t_c(self):
+        return self.transit_pars[0]
+
     duration = property(_get_duration)
+    t_c = property(_get_t_c)
 
 def transit_linear(time_array, t_c, delta, T, tau):
     """

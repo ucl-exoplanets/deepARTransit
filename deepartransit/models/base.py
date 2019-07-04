@@ -81,12 +81,16 @@ class BaseTrainer:
                 t_eval += self.eval_step(verbose)
                 if verbose:
                     print('train epoch result:', result)
+                if self.config.adapt_ranges:
+                    self.update_ranges()
 
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
         print('total training time: {} \nAVG time per epoch: {}'
               .format(tf-t0, (tf-t0)/(self.config.num_epochs-initial_epoch)))
-        print('including {}s for {} evaluation steps in total'.format(t_eval, self.config.num_epochs // self.config.freq_eval))
+        print('including {}s for {} evaluation steps in total'.format(t_eval,
+                                                                      self.config.num_epochs
+                                                                      // self.config.freq_eval))
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):
