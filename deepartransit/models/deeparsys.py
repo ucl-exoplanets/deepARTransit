@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-from utils.transit import transit_linear, fit_transit_linear
+from utils.transit import LinearTransit
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
@@ -14,7 +14,6 @@ Variant from deepAR original network, adapted to transit light curve structure
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        print(self.config)
         self.build()
         super().init_saver()
 
@@ -75,6 +74,9 @@ class DeepARSysModel(BaseModel):
 class DeepARSysTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None):
         super().__init__(sess, model, data, config, logger=logger)
+        self.transit = LinearTransit(data.time_array[:config.pretrans_length +
+                                                     config.trans_length +
+                                                     config.postrans_length])
 
     def train_epoch(self):
         losses = []
@@ -132,31 +134,33 @@ class DeepARSysTrainer(BaseTrainer):
         #################
         l1 = self.config.pretrans_length
         l2 = self.config.trans_length
+        l3 = self.config.postrans_length
         #print(self.data.Z.shape, sampled_traces.shape)
 
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, l1:l1+l2+1]) /
-                             self.data.scaler_Z.inverse_transform(sampled_traces.mean(axis=0)))
-        t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[l1:l1+l2+1],
-                                                repeat=self.config.batch_size)
-        #print(t_c, delta, T, tau)
+        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :l1+l2+l3]) /
+                             self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)))
+        #print(transit_component.shape, np.expand_dims(locs, 0).shape, self.data.Z.shape, self.data.time_array.shape)
+        #t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[:l1+l2+l3],
+        #                                        repeat=self.config.batch_size)
+        self.transit.fit(transit_component, range_fit=range(l1+l2+l3), p0=self.transit.transit_pars)
         t4 = timer()
         # saving transit parameters
         np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
-                np.array([t_c,delta, T, tau]))
+                np.array(self.transit.transit_pars))
 
         # compute metrics
         ###############
         #TODO: change the repeat provisional thing...
-        transit_fit_rep = np.expand_dims(transit_linear(self.data.time_array[l1:l1+l2 +1], t_c, delta, T, tau), -1).repeat(self.config.batch_size, -1)
+        transit_fit_rep = np.expand_dims(self.transit.get_flux(), -1).repeat(self.config.batch_size, -1)
 
         mse_transit = ((transit_component.T - transit_fit_rep)**2).mean()
 
         # TENSORBOARD eval summary
         summaries_dict = {
-                          't_c': np.array(t_c),
-                          'delta': np.array(delta),
-                          'T': np.array(T),
-                          'tau': np.array(tau),
+                          't_c': np.array(self.transit.transit_pars[0]),
+                          'delta': np.array(self.transit.transit_pars[1]),
+                          'T': np.array(self.transit.transit_pars[2]),
+                          'tau': np.array(self.transit.transit_pars[3]),
                           'mse_transit': np.array(mse_transit)
         }
 
@@ -167,6 +171,7 @@ class DeepARSysTrainer(BaseTrainer):
                   + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
 
         return timer() - t1
+
     def _update_ranges(self, t_c, delta, T, tau):
         self.trans_length = (T + delta) + (T + tau) * 0.1 # 0.1 : 10% margin around the transit
         self.pretrans_length = int(np.floor(t_c - self.trans_length // 2))

@@ -2,7 +2,7 @@
 exp_name: deeparsys_test
 
 # Data
-data_path: deepartransit/data_handling/plc_22807808.npy
+data_path: deepartransit/data_handling/rlc_22807808.npy
 cov_path: deepartransit/data_handling/cent_22807808.npy
 num_features: 1
 num_cov: 2
@@ -26,7 +26,7 @@ from_scratch: True
 num_epochs: 2
 num_iter: 1 # TODO: extract form data_handling structure itself?
 learning_rate: 0.001
-batch_size: 25 # TODO: add default behaviour when batch_size=0
+batch_size: 1 # TODO: add default behaviour when batch_size=0
 
 
 # Evaluation
