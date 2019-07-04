@@ -32,3 +32,8 @@ def test_LinearTransit_range():
     t.fit(x, range_fit=range(10, N-10))
     print(t.transit_pars)
     np.testing.assert_allclose(t.transit_pars, pars)
+
+def test_LinerTransit_duration():
+    t = LinearTransit(time_array, pars)
+    d = t.duration
+    np.testing.assert_allclose(d, pars[-2] + pars[-1])

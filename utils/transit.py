@@ -59,7 +59,11 @@ class Transit:
             self.transit_pars = popt
         return 0
 
+    def _get_duration(self):
+        raise NotImplementedError
+
     flux = property(get_flux)
+    duration = property(_get_duration)
 
 class LinearTransit(Transit):
     def __init__(self, time_array, transit_pars=None):
@@ -91,8 +95,11 @@ class LinearTransit(Transit):
         x4 = time_array - (t_c + T / 2 + tau / 2)
         return 1. - delta / tau * (np.maximum(x1, 0.) - np.maximum(x2, 0.) - np.maximum(x3, 0.) + np.maximum(x4, 0.))
 
+    def _get_duration(self):
+        T, tau = self.transit_pars[-2:]
+        return (T + tau)
 
-
+    duration = property(_get_duration)
 
 def transit_linear(time_array, t_c, delta, T, tau):
     """
