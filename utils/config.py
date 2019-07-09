@@ -20,8 +20,10 @@ def get_config_from_yaml(yaml_file):
     return config, config_dict
 
 
-def process_config(yaml_file):
+def process_config(yaml_file, **args):
     config, _ = get_config_from_yaml(yaml_file)
+    for k, v in args.items():
+        config[k] = v
     config.summary_dir = os.path.join("deepartransit", "experiments", config.exp_name, "summary/")
     config.checkpoint_dir = os.path.join("deepartransit", "experiments", config.exp_name, "checkpoint/")
     config.plots_dir = os.path.join("deepartransit", "experiments", config.exp_name, "plots/")
@@ -41,7 +43,3 @@ def get_config_file(dir_, file_name=None, extension='.yml'):
             print('no config file found in dir')
         exit(0)
 
-
-
-def create_config_file():
-    raise NotImplementedError

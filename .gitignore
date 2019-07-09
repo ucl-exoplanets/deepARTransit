@@ -2,3 +2,4 @@ deepartransit/experiments/*
 run/*
 *.npy
 .ipynb_checkpoints
+misc/*

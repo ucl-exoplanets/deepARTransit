@@ -12,6 +12,10 @@ def get_args():
         '-e', '--experiment',
         metavar='E',
         help='The experiment name')
+    argparser.add_argument(
+        '-r', '--radius',
+        metavar='R', type=int,
+        help='The aperture radius')
 
     args = argparser.parse_args()
     return args

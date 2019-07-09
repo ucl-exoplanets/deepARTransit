@@ -1,11 +1,13 @@
 import numpy as np
 from bunch import Bunch
-from pixlc.scaling import MinMaxScaler, MeanStdScaler
+from pixlc.scaling import MeanStdScaler
 
 class DataGenerator:
     def __init__(self, config):
         self.config = config
+        print('loading data from '+ self.config.data_path)
         self.Z = np.load(self.config.data_path)
+        assert self.Z is not None
         if self.config.cov_path:
             if isinstance(self.config.cov_path, list):
                 self.X = np.concatenate([np.load(path_) for path_ in self.config.cov_path], -1)
@@ -77,11 +79,8 @@ class DataGenerator:
             assert self.config.num_features == self.Z.shape[-1]
             if self.config.cov_path:
                 assert self.config.num_cov == self.X.shape[-1]
-        except AssertionError:
-            print('inconsistency between data_handling and config dimensions')
-            self.Z = None
-            self.X = None
-            return -1
+        except AssertionError as e:
+            raise e('inconsistency between data_handling and config dimensions')
 
 if __name__ == '__main__':
     config_dict = {'data_path': '../data_handling/plc_22807808.npy',
