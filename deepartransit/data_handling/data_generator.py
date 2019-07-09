@@ -7,7 +7,6 @@ class DataGenerator:
         self.config = config
         print('loading data from '+ self.config.data_path)
         self.Z = np.load(self.config.data_path)
-        assert self.Z is not None
         if self.config.cov_path:
             if isinstance(self.config.cov_path, list):
                 self.X = np.concatenate([np.load(path_) for path_ in self.config.cov_path], -1)
@@ -75,12 +74,30 @@ class DataGenerator:
             self.X = None
             return -1
 
+
         try:
-            assert self.config.num_features == self.Z.shape[-1]
-            if self.config.cov_path:
+            if 'num_features' in self.config:
+                assert self.config.num_features == self.Z.shape[-1]
+            if 'num_cov' in self.config:
                 assert self.config.num_cov == self.X.shape[-1]
         except AssertionError as e:
             raise e('inconsistency between data_handling and config dimensions')
+
+    def update_config(self, verbose=True):
+        '''
+        :return: new modified config file with data-related parameters
+        '''
+        self.config['num_features'] = self.Z.shape[-1]
+        self.config['num_cov'] = self.X.shape[-1]
+        self.config['num_ts'] = self.Z.shape[0]
+        if 'batch_size' not in self.config:
+            self.config['batch_size'] = self.config['num_ts']
+            if verbose:
+                print('Inferring num_features, num_cov, num_ts, batch_size from the data.')
+        else:
+            if verbose:
+                print('Inferring num_features, num_cov, num_ts from the data.')
+        return self.config
 
 if __name__ == '__main__':
     config_dict = {'data_path': '../data_handling/plc_22807808.npy',

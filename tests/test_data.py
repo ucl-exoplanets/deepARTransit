@@ -15,3 +15,15 @@ def test_data():
 
     Z_test, X_test = data.get_test_data()
     assert Z_test.shape[1] == X_test.shape[1] == config.test_length + config.cond_length
+
+config_path_2 = os.path.join('tests', 'deepar_config_test_2.yml')
+
+def test_data_config_update():
+    config = process_config(config_path_2)
+    data = data_generator.DataGenerator(config)
+
+    config = data.update_config()
+    assert 'num_cov' in config
+    assert 'num_features' in config
+    assert 'num_ts' in config
+    assert config.batch_size == config.num_ts

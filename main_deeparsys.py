@@ -29,8 +29,10 @@ if __name__ == '__main__':
         print("missing or invalid arguments")
         exit(0)
 
-    model = deeparsys.DeepARSysModel(config)
     data = data_generator.DataGenerator(config)
+    config = data.update_config()
+    model = deeparsys.DeepARSysModel(config)
+
 
     if config.from_scratch:
         model.delete_checkpoints()

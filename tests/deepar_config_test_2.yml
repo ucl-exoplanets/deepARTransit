@@ -1,0 +1,15 @@
+cond_length: 4
+pred_length: 2
+data_path: deepartransit/data_handling/plc_22807808.npy
+cov_path: deepartransit/data_handling/cent_22807808.npy
+rescaling: False
+test_length: 0
+learning_rate: 0.001
+num_traces: 1
+num_layers: 2
+hidden_units: 2
+cell_args: {}
+num_iter: 2
+num_epochs: 2
+exp_name: deepar_test
+freq_eval: 10000
