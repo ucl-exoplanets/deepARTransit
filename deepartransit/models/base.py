@@ -81,7 +81,7 @@ class BaseTrainer:
                 t_eval += self.eval_step(verbose)
                 if verbose:
                     print('train epoch result:', result)
-                if self.config.adapt_ranges:
+                if 'adapt_ranges' in self.config and self.config.adapt_ranges and cur_epoch < self.config.num_epochs // 2:
                     self.update_ranges()
 
             self.sess.run(self.model.increment_cur_epoch_tensor)
