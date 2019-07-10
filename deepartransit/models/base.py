@@ -54,9 +54,10 @@ class BaseModel:
         raise NotImplementedError
 
     @staticmethod
-    def gaussian_likelihood(sigma):
+    def gaussian_likelihood(sigma, weights=1.0):
         def gaussian_loss(y_true, y_pred):
-            return tf.reduce_mean(0.5*tf.log(sigma) + 0.5*tf.math.divide(tf.square(y_true - y_pred), sigma)) + 1e-6 + 6
+            return tf.reduce_mean(tf.math.multiply(weights, 0.5*tf.log(sigma) + 0.5*tf.math.divide(tf.square(y_true - y_pred), sigma))) + 1e-6 + 6
+            #@return tf.losses.compute_weighted_loss(losses, weights)
         return gaussian_loss
 
 

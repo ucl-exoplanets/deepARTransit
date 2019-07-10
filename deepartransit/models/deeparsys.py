@@ -28,6 +28,7 @@ class DeepARSysModel(BaseModel):
 
         self.Z = tf.placeholder(shape=(None, None, self.config.num_features), dtype=tf.float32)
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
+        self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
 
         rnn_at_layer = []
         state_at_layer = []
@@ -63,7 +64,7 @@ class DeepARSysModel(BaseModel):
 
             if t < self.pretrans_length or (t >= self.pretrans_length +
                                                    self.trans_length):
-                likelihood = super().gaussian_likelihood(scale)(self.Z[:, t], loc)
+                likelihood = super().gaussian_likelihood(scale, self.weights)(self.Z[:, t], loc)
                 loss = tf.add(loss, likelihood)
 
             self.loc_at_time.append(loc)
@@ -103,8 +104,9 @@ class DeepARSysTrainer(BaseTrainer):
 
     def train_step(self):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
+        weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
         _, loss = self.sess.run([self.model.train_step, self.model.loss],
-                                feed_dict={self.model.Z: batch_Z, self.model.X: batch_X})
+                                feed_dict={self.model.Z: batch_Z, self.model.X: batch_X, self.model.weights: weights})
         return loss
 
     def sample_sys_traces(self):
@@ -171,7 +173,7 @@ class DeepARSysTrainer(BaseTrainer):
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
         if verbose:
-            print('STEP (global) {}:\n\tEvaluation: mse_transit = {:0.5f}\n'.format(cur_it, mse_transit)
+            print('STEP (global) {}:\n\tEvaluation: mse_transit = {:0.7f}\n'.format(cur_it, mse_transit)
                   + '\tSaving predictions vector and fitted transit parameters\n'
                   + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
 
