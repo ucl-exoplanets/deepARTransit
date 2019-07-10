@@ -5,12 +5,6 @@ N = 100
 time_array = np.linspace(0, 1, N)
 pars = 0.55, 0.1, 0.3, 0.1
 
-#
-# def test_transit_linear():
-#     x = transit_linear(time_array, *pars)
-#     x = np.expand_dims(x, 0)
-#     pred = fit_transit_linear(x, time_array)
-#     np.testing.assert_allclose(pred, pars)
 
 def test_LinearTransit_1D_data():
     t = LinearTransit(time_array, pars)
