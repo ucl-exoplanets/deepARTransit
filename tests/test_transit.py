@@ -1,5 +1,5 @@
 import numpy as np
-from utils.transit import transit_linear, fit_transit_linear, LinearTransit
+from utils.transit import LinearTransit
 
 N = 100
 time_array = np.linspace(0, 1, N)
@@ -36,4 +36,4 @@ def test_LinearTransit_range():
 def test_LinerTransit_duration():
     t = LinearTransit(time_array, pars)
     d = t.duration
-    np.testing.assert_allclose(d, pars[-2] + pars[-1])
+    np.testing.assert_allclose(d, pars[-2] + 2 * pars[-1])
