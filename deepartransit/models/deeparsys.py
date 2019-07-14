@@ -109,7 +109,7 @@ class DeepARSysModel(BaseModel):
 
 
         for t in range(self.T):
-            if t < self.pretrans_length or (t >= self.pretrans_length + self.trans_length):
+            if t < self.pretrans_length + self.margin_length or (t >= self.pretrans_length + self.trans_length - self.margin_length):
                 likelihood = super().gaussian_likelihood(self.scale_at_time[t], self.weights)(self.Z[:, t], self.loc_at_time[t])
                 loss = tf.add(loss, likelihood)
 
