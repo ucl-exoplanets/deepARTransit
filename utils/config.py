@@ -28,6 +28,9 @@ def process_config(yaml_file, **args):
     config.checkpoint_dir = os.path.join("deepartransit", "experiments", config.exp_name, "checkpoint/")
     config.plots_dir = os.path.join("deepartransit", "experiments", config.exp_name, "plots/")
     config.output_dir =  os.path.join("deepartransit", "experiments", config.exp_name, "output/")
+
+    if 'stop_adapt_frac' not in config:
+        config['stop_adapt_frac'] = 0.5
     return config
 
 def get_config_file(dir_, file_name=None, extension='.yml'):

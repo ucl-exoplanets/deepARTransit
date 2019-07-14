@@ -82,7 +82,9 @@ class BaseTrainer:
                 t_eval += self.eval_step(verbose)
                 if verbose:
                     print('train epoch result:', result)
-                if 'adapt_ranges' in self.config and self.config.adapt_ranges and cur_epoch < self.config.num_epochs // 2:
+                if ('adapt_ranges' in self.config
+                        and self.config.adapt_ranges
+                        and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
                     self.update_ranges()
 
             self.sess.run(self.model.increment_cur_epoch_tensor)
@@ -98,7 +100,6 @@ class BaseTrainer:
             self.train_step()
         cur_it = self.model.global_step_tensor.eval(self.sess)
         self.logger.summarize(cur_it, summaries_dict={})
-        # TODO: fill the logger
         self.model.save(self.sess)
 
 
