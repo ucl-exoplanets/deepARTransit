@@ -17,6 +17,8 @@ class DeepARSysModel(BaseModel):
         self.trans_length = self.config.trans_length
         self.pretrans_length = self.config.pretrans_length
         self.postrans_length = self.config.postrans_length
+        self.margin_length = 0
+        self.T = self.trans_length + self.pretrans_length + self.postrans_length
         self.build()
         super().init_saver()
 
@@ -37,11 +39,27 @@ class DeepARSysModel(BaseModel):
             #state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
             state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
 
-        loc_decoder = tf.layers.Dense(self.config.num_features)
-        scale_decoder = tf.layers.Dense(self.config.num_features, activation='sigmoid')
+        loc_decoder_for = tf.layers.Dense(self.config.num_features)
+        scale_decoder_for = tf.layers.Dense(self.config.num_features, activation='sigmoid')
+
+        if self.config.bidirectional:
+            rnn_back_at_layer = []
+            state_back_at_layer = []
+            for _ in range(self.config.num_layers):
+                rnn_back_at_layer.append(tf.nn.rnn_cell.LSTMCell(self.config.hidden_units, **self.config.cell_args))
+                # state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
+                state_back_at_layer.append(
+                    rnn_back_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32))  # tf.1 version
+
+            loc_decoder_back = tf.layers.Dense(self.config.num_features)
+            scale_decoder_back = tf.layers.Dense(self.config.num_features, activation='sigmoid')
+            loc_decoder = tf.layers.Dense(self.config.num_features)
+            scale_decoder = tf.layers.Dense(self.config.num_features, activation='sigmoid')
+
+
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
 
-        for t in range(self.pretrans_length + self.trans_length + self.postrans_length):
+        for t in range(self.T):
             # initialization of input z_0 with zero
             if t == 0:
                 z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
@@ -59,16 +77,42 @@ class DeepARSysModel(BaseModel):
             for layer in range(self.config.num_layers):
                 temp_input, state_at_layer[layer] = rnn_at_layer[layer](temp_input, state_at_layer[layer])
 
-            loc = loc_decoder(temp_input)
-            scale = scale_decoder(temp_input)
-
-            if t < self.pretrans_length or (t >= self.pretrans_length +
-                                                   self.trans_length):
-                likelihood = super().gaussian_likelihood(scale, self.weights)(self.Z[:, t], loc)
-                loss = tf.add(loss, likelihood)
-
+            loc = loc_decoder_for(temp_input)
+            scale = scale_decoder_for(temp_input)
             self.loc_at_time.append(loc)
             self.scale_at_time.append(scale)
+
+        if self.config.bidirectional:
+            for t in range(self.T):
+                # initialization of input z_0 with zero
+                if t == 0:
+                    z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
+                elif t < self.postrans_length or t > (self.postrans_length + self.trans_length):
+                    z_prev = self.Z[:, self.T - t]
+                else:  # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+                    sample_z = tfp.distributions.Normal(loc, scale).sample()
+                    self.sample_at_time.append(sample_z)
+                    z_prev = sample_z
+
+                if self.config.num_cov:
+                    temp_input = tf.concat([z_prev, self.X[:, self.T-t-1]], axis=-1)
+                else:
+                    temp_input = z_prev
+                for layer in range(self.config.num_layers):
+                    temp_input, state_back_at_layer[layer] = rnn_back_at_layer[layer](temp_input, state_back_at_layer[layer])
+
+                loc = loc_decoder_back(temp_input)
+                scale = scale_decoder_back(temp_input)
+
+                self.loc_at_time[self.T - t - 1] = loc_decoder(tf.concat( [self.loc_at_time[self.T - t - 1], loc], -1))
+                self.scale_at_time[self.T - t - 1] = scale_decoder(tf.concat( [self.scale_at_time[self.T - t - 1], scale], -1))
+
+
+        for t in range(self.T):
+            if t < self.pretrans_length or (t >= self.pretrans_length + self.trans_length):
+                likelihood = super().gaussian_likelihood(self.scale_at_time[t], self.weights)(self.Z[:, t], self.loc_at_time[t])
+                loss = tf.add(loss, likelihood)
+
 
         with tf.name_scope("loss"):
             self.loss = tf.math.divide(loss, (self.pretrans_length + self.postrans_length))
@@ -184,5 +228,6 @@ class DeepARSysTrainer(BaseTrainer):
         self.model.pretrans_length = int(np.floor(self.transit.t_c - self.model.trans_length // 2))
         self.model.postrans_length = ((self.config.trans_length + self.config.pretrans_length + self.config.postrans_length)
                                 - (self.model.trans_length + self.model.pretrans_length))
+        self.model.margin = (self.model.trans_length - self.transit.duration) // 2
         if verbose:
             print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))

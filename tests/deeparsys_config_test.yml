@@ -17,6 +17,7 @@ rescaling: True
 num_layers: 1
 hidden_units: 4
 cell_args: {}
+bidirectional: True
 
 # Algo
 num_traces: 2
