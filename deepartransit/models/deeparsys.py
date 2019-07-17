@@ -109,10 +109,13 @@ class DeepARSysModel(BaseModel):
 
 
         for t in range(self.T):
-            if t < self.pretrans_length + self.margin_length or (t >= self.pretrans_length + self.trans_length - self.margin_length):
+            in_outside_range = lambda t: t < self.pretrans_length or t >= self.pretrans_length + self.trans_length
+            in_margin_range = lambda t: ((t < self.pretrans_length + self.margin_length)
+                                or (t >= self.pretrans_length + self.trans_length - self.margin_length))
+
+            if in_outside_range(t) or (self.config.train_margin and in_margin_range(t)):
                 likelihood = super().gaussian_likelihood(self.scale_at_time[t], self.weights)(self.Z[:, t], self.loc_at_time[t])
                 loss = tf.add(loss, likelihood)
-
 
         with tf.name_scope("loss"):
             self.loss = tf.math.divide(loss, (self.pretrans_length + self.postrans_length))
@@ -212,7 +215,8 @@ class DeepARSysTrainer(BaseTrainer):
                           'T': np.array(self.transit.transit_pars[2]),
                           'tau': np.array(self.transit.transit_pars[3]),
                           'mse_transit': np.array(mse_transit),
-                          'trans_length': np.array(self.model.trans_length)
+                          'trans_length': np.array(self.model.trans_length),
+                          'margin_length': np.array(self.model.margin_length)
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
@@ -228,6 +232,7 @@ class DeepARSysTrainer(BaseTrainer):
         self.model.pretrans_length = int(np.floor(self.transit.t_c - self.model.trans_length // 2))
         self.model.postrans_length = ((self.config.trans_length + self.config.pretrans_length + self.config.postrans_length)
                                 - (self.model.trans_length + self.model.pretrans_length))
-        self.model.margin = (self.model.trans_length - self.transit.duration) // 2
+        self.model.margin_length = (self.model.trans_length - self.transit.duration) // 2
+        # self.model. =
         if verbose:
             print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))

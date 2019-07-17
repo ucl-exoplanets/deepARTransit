@@ -33,6 +33,8 @@ def process_config(yaml_file, **args):
         config['stop_adapt_frac'] = 0.5
     if 'bidirectional' not in config:
         config['bidirectional'] = False
+    if 'train_margin' not in config:
+        config['bidirectional'] = True
     return config
 
 def get_config_file(dir_, file_name=None, extension='.yml'):
