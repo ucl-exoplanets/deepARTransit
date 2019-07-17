@@ -7,6 +7,7 @@ class BaseModel:
     def __init__(self, config):
         self.config = config
         self._init_global_step()
+        self._init_learning_rate()
         self._init_cur_epoch()
         self._init_best_loss()
 
@@ -39,6 +40,16 @@ class BaseModel:
         # DON'T forget to add the global step tensor to the tensorflow trainer
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
+
+    def _init_learning_rate(self):
+        with tf.variable_scope('learning_rate'):
+            if ("starter_learning_rate" in self.config and "end_learning_rate" in self.config
+                    and "power" in self.config and "decay_steps" in self.config):
+                self.learning_rate_tensor = tf.train.polynomial_decay(self.config.starter_learning_rate, self.global_step_tensor,
+                                                               self.config.decay_steps, self.config.end_learning_rate, self.config.power)
+            else:
+                self.learning_rate_tensor = tf.Variable(self.config.learning_rate, trainable=False, name='learning_rate')
+
 
     # just initialize a tensorflow variable to use it as epoch counter
     def _init_cur_epoch(self):

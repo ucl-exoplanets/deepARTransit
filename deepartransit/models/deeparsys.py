@@ -119,7 +119,7 @@ class DeepARSysModel(BaseModel):
 
         with tf.name_scope("loss"):
             self.loss = tf.math.divide(loss, (self.pretrans_length + self.postrans_length))
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_tensor)
             self.train_step = self.optimizer.minimize(loss, global_step=self.global_step_tensor)
 
 
@@ -151,7 +151,10 @@ class DeepARSysTrainer(BaseTrainer):
 
     def train_step(self):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
-        weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
+        if self.config.num_features > 1:
+            weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
+        else:
+            weights = np.ones(batch_Z[:,0,:].shape)
         _, loss = self.sess.run([self.model.train_step, self.model.loss],
                                 feed_dict={self.model.Z: batch_Z, self.model.X: batch_X, self.model.weights: weights})
         return loss
@@ -216,7 +219,8 @@ class DeepARSysTrainer(BaseTrainer):
                           'tau': np.array(self.transit.transit_pars[3]),
                           'mse_transit': np.array(mse_transit),
                           'trans_length': np.array(self.model.trans_length),
-                          'margin_length': np.array(self.model.margin_length)
+                          'margin_length': np.array(self.model.margin_length),
+                          'learning_rate': np.array(self.model.learning_rate_tensor.eval(self.sess))
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)

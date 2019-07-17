@@ -34,7 +34,17 @@ def process_config(yaml_file, **args):
     if 'bidirectional' not in config:
         config['bidirectional'] = False
     if 'train_margin' not in config:
-        config['bidirectional'] = True
+        config['train_margin'] = True
+    if 'starter_learning_rate' in config:
+        if 'end_learning_rate' not in config:
+            config['end_learning_rate'] = config['starter_learning_rate'] / 100
+        if 'power' not in config:
+            config['power'] = 5
+        if 'decay_steps' not in config:
+            config['decay_steps'] = config['num_epochs']
+    else:
+        if 'learning_rate' not in config:
+            config['learning_rate'] = 0.001
     return config
 
 def get_config_file(dir_, file_name=None, extension='.yml'):
