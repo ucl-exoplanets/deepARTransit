@@ -31,3 +31,10 @@ def test_LinerTransit_duration():
     t = LinearTransit(time_array, pars)
     d = t.duration
     np.testing.assert_allclose(d, pars[-2] + 2 * pars[-1])
+
+def test_sigma():
+    t = LinearTransit(time_array)
+    x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars), 0)
+    t.fit(x, sigma = np.random.uniform(1.01, 1.03, N))
+    np.testing.assert_allclose(t.transit_pars, pars)
+    print(t.pcov, np.diag(t.pcov))

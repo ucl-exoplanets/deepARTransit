@@ -29,7 +29,7 @@ class Transit:
     def _default_pars(self, p0=None, bounds=None):
         raise NotImplementedError
 
-    def fit(self, data, p0=None, bounds=None, range_fit=None, time_axis = 1, replace_pars=True):
+    def fit(self, data, p0=None, bounds=None, range_fit=None, sigma=None, time_axis = 1, replace_pars=True):
         if range_fit is None:
             self.range_fit = range(0, self.time_array.shape[-1])
         else:
@@ -47,6 +47,8 @@ class Transit:
         popt, pcov = opt.curve_fit(self._compute_flux,
                                    self.time_array[self.range_fit],
                                    self.data_fit,
+                                   sigma=sigma,
+                                   absolute_sigma=True,
                                    p0=self.p0,
                                    bounds=self.bounds,
                                    maxfev=100000)
@@ -105,3 +107,12 @@ class LinearTransit(Transit):
     duration = property(_get_duration)
     t_c = property(_get_t_c)
 
+if __name__ == '__main__':
+    N = 100
+    time_array = np.linspace(0, 1, N)
+    pars = 0.55, 0.1, 0.3, 0.1
+
+    t = LinearTransit(time_array)
+    x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars), 0)
+    t.fit(x, sigma = np.random.uniform(0.1, 0.2, N))
+    print(np.sqrt(np.diag(t.pcov)))
