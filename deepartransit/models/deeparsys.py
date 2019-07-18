@@ -34,10 +34,14 @@ class DeepARSysModel(BaseModel):
 
         rnn_at_layer = []
         state_at_layer = []
-        for _ in range(self.config.num_layers):
-            rnn_at_layer.append(tf.keras.layers.LSTMCell(self.config.hidden_units, **self.config.cell_args))
-            state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
-            #state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
+        for l in range(self.config.num_layers):
+            rnn_at_layer.append(tf.contrib.rnn.LSTMCell(self.config.hidden_units, **self.config.cell_args))
+
+            #state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
+            state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
+            if 'dropout' in self.config:
+                rnn_at_layer[l] = tf.nn.rnn_cell.DropoutWrapper(rnn_at_layer[l], output_keep_prob=1 - self.config.dropout)
+                print('using dropout rate {}'.format(self.config.dropout))
 
         loc_decoder_for = tf.layers.Dense(self.config.num_features)
         scale_decoder_for = tf.layers.Dense(self.config.num_features, activation='sigmoid')
@@ -173,7 +177,6 @@ class DeepARSysTrainer(BaseTrainer):
     def eval_step(self, verbose=True):
         cur_it = self.model.global_step_tensor.eval(self.sess)
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
-        # save locs and scales predictions
 
         t1 = timer()
         locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
@@ -193,16 +196,14 @@ class DeepARSysTrainer(BaseTrainer):
         l1 = self.model.pretrans_length
         l2 = self.model.trans_length
         l3 = self.model.postrans_length
-        #print(self.data.Z.shape, sampled_traces.shape)
 
         transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :l1+l2+l3]).sum(-1) /
                              self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
-        #print(locs.shape, scales.shape, transit_component.shape, self.data.Z.shape, self.data.time_array.shape)
-        #t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[:l1+l2+l3],
-        #                                        repeat=self.config.batch_size)
 
         for i in range(self.data.Z.shape[0]):
-            self.transit[i].fit(transit_component[i], range_fit=range(l1+l2+l3), p0=self.transit[i].transit_pars, time_axis=0)
+            self.transit[i].fit(transit_component[i],
+                                range_fit=range(min(l1, 5), max(l1+l2, l1+l2+l3-5)), # goal = avoid extremities quircks
+                                p0=self.transit[i].transit_pars, time_axis=0)
             print(self.transit[i].transit_pars)
         t4 = timer()
         # saving transit parameters
