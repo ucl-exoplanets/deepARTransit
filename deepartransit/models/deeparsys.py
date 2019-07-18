@@ -14,11 +14,14 @@ Variant from deepAR original network, adapted to transit light curve structure
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        self.trans_length = self.config.trans_length
-        self.pretrans_length = self.config.pretrans_length
-        self.postrans_length = self.config.postrans_length
-        self.margin_length = 0
-        self.T = self.trans_length + self.pretrans_length + self.postrans_length
+        self.trans_length = ([self.config.trans_length] * self.config.batch_size
+                             if isinstance(self.config.trans_length, int) else self.config.trans_length)
+        self.pretrans_length = ([self.config.pretrans_length] * self.config.batch_size
+                                if isinstance(self.config.pretrans_length, int) else self.config.pretrans_length)
+        self.postrans_length = ([self.config.postrans_length] * self.config.batch_size
+                                if isinstance(self.config.postrans_length, int) else self.config.postrans_length)
+        self.margin_length = [0] * self.config.batch_size
+        self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
         self.build()
         super().init_saver()
 
@@ -67,13 +70,17 @@ class DeepARSysModel(BaseModel):
             # initialization of input z_0 with zero
             if t == 0:
                 z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
-            elif t < self.pretrans_length or t > (self.pretrans_length + self.trans_length):
-                z_prev = self.Z[:, t - 1]
-            else: # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+            else:
                 sample_z = tfp.distributions.Normal(loc, scale).sample()
                 self.sample_at_time.append(sample_z)
-                z_prev = sample_z
+                z_prev_list = []
+                for obs in range(self.config.batch_size):
+                    if t < self.pretrans_length[obs] or t > (self.pretrans_length[obs] + self.trans_length[obs]):
+                        z_prev_list.append(tf.expand_dims(self.Z[obs, t - 1], 0))
+                    else: # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+                        z_prev_list.append(tf.expand_dims(sample_z[obs],0))
 
+                z_prev = tf.concat(z_prev_list, 0)
             if self.config.num_cov:
                 temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
             else:
@@ -91,13 +98,16 @@ class DeepARSysModel(BaseModel):
                 # initialization of input z_0 with zero
                 if t == 0:
                     z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
-                elif t < self.postrans_length or t > (self.postrans_length + self.trans_length):
-                    z_prev = self.Z[:, self.T - t]
-                else:  # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+                else:
                     sample_z = tfp.distributions.Normal(loc, scale).sample()
                     self.sample_at_time.append(sample_z)
-                    z_prev = sample_z
-
+                    z_prev_list = []
+                    for obs in range(self.config.batch_size):
+                        if t < self.postrans_length[obs] or t > (self.postrans_length[obs] + self.trans_length[obs]):
+                            z_prev_list.append(tf.expand_dims(self.Z[obs, self.T - t], 0))
+                        else:  # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+                            z_prev_list.append(tf.expand_dims(sample_z[obs],0))
+                    z_prev = tf.concat(z_prev_list, 0)
                 if self.config.num_cov:
                     temp_input = tf.concat([z_prev, self.X[:, self.T-t-1]], axis=-1)
                 else:
@@ -113,16 +123,17 @@ class DeepARSysModel(BaseModel):
 
 
         for t in range(self.T):
-            in_outside_range = lambda t: t < self.pretrans_length or t >= self.pretrans_length + self.trans_length
-            in_margin_range = lambda t: ((t < self.pretrans_length + self.margin_length)
-                                or (t >= self.pretrans_length + self.trans_length - self.margin_length))
-
-            if in_outside_range(t) or (self.config.train_margin and in_margin_range(t)):
-                likelihood = super().gaussian_likelihood(self.scale_at_time[t], self.weights)(self.Z[:, t], self.loc_at_time[t])
-                loss = tf.add(loss, likelihood)
+            in_outside_range = lambda t,obs: t < self.pretrans_length[obs] or t >= self.pretrans_length[obs] + self.trans_length[obs]
+            in_margin_range = lambda t,obs: ((t < self.pretrans_length[obs] + self.margin_length[obs])
+                                or (t >= self.pretrans_length[obs] + self.trans_length[obs] - self.margin_length[obs]))
+            for obs in range(self.config.batch_size):
+                if in_outside_range(t, obs) or (self.config.train_margin and in_margin_range(t, obs)):
+                    likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t], self.loc_at_time[t][obs])
+                    loss = tf.add(loss, tf.math.divide(likelihood, (self.pretrans_length[obs] + self.postrans_length[obs] -
+                                                                    (self.margin_length[obs] if self.config.train_margin else 0))))
 
         with tf.name_scope("loss"):
-            self.loss = tf.math.divide(loss, (self.pretrans_length + self.postrans_length))
+            self.loss = loss
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_tensor)
             self.train_step = self.optimizer.minimize(loss, global_step=self.global_step_tensor)
 
@@ -167,7 +178,7 @@ class DeepARSysTrainer(BaseTrainer):
 
     def sample_sys_traces(self):
         samples_cond_test = np.zeros(shape=(self.config.num_traces, self.config.batch_size,
-                                            self.model.trans_length + 1, self.config.num_features))
+                                            self.model.T-1, self.config.num_features))
         for trace in range(self.config.num_traces):
             samples_cond_test[trace] = np.array(
                 self.sess.run(self.model.sample_at_time, feed_dict={self.model.Z: self.data.Z,
@@ -193,16 +204,14 @@ class DeepARSysTrainer(BaseTrainer):
         t3 = timer()
         # Fit transit
         #################
-        l1 = self.model.pretrans_length
-        l2 = self.model.trans_length
-        l3 = self.model.postrans_length
-
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :l1+l2+l3]).sum(-1) /
+        print('test')
+        print(np.array(locs).shape, np.array(scales).shape)
+        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :self.model.T]).sum(-1) /
                              self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
 
         for i in range(self.data.Z.shape[0]):
             self.transit[i].fit(transit_component[i],
-                                range_fit=range(min(l1, 5), max(l1+l2, l1+l2+l3-5)), # goal = avoid extremities quircks
+                                range_fit=range(5, self.model.T-5), # goal = avoid extremities quircks
                                 p0=self.transit[i].transit_pars, time_axis=0)
             print(self.transit[i].transit_pars)
         t4 = timer()
@@ -237,11 +246,11 @@ class DeepARSysTrainer(BaseTrainer):
         return timer() - t1
 
     def update_ranges(self, margin = 1.05, verbose=True):
-        self.model.trans_length = int(self.transit.duration * margin)
-        self.model.pretrans_length = int(np.floor(self.transit.t_c - self.model.trans_length // 2))
-        self.model.postrans_length = ((self.config.trans_length + self.config.pretrans_length + self.config.postrans_length)
-                                - (self.model.trans_length + self.model.pretrans_length))
-        self.model.margin_length = (self.model.trans_length - self.transit.duration) // 2
-        # self.model. =
-        if verbose:
-            print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
+        for obs in range(self.data.Z.shape[0]):
+            self.model.trans_length[obs] = int(self.transit[obs].duration * margin)
+            self.model.pretrans_length[obs] = int(np.floor(self.transit[obs].t_c - self.model.trans_length[obs] // 2))
+            self.model.postrans_length[obs] = ((self.config.trans_length[obs] + self.config.pretrans_length[obs] + self.config.postrans_length[obs])
+                                    - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
+            self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration -1 ) // 2
+            if verbose:
+                print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
