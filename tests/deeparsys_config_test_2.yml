@@ -1,0 +1,39 @@
+# Experiment name
+exp_name: deeparsys_test
+
+# Data
+data_path: deepartransit/data/agol_transits_r2_nobacksub/rlc_all.npy
+cov_path: deepartransit/data/agol_transits_r2_nobacksub/cent_all.npy
+num_features: 1
+num_cov: 2
+pretrans_length: 5
+trans_length: 3
+postrans_length: 5
+
+# Data modif
+rescaling: True
+
+# Architecture
+num_layers: 1
+hidden_units: 4
+cell_args: {}
+bidirectional: True
+
+# Algo
+num_traces: 2
+adapt_ranges: True
+
+# Training
+from_scratch: True
+num_epochs: 20
+num_iter: 1 # TODO: extract form data_handling structure itself?
+learning_rate: 0.001
+batch_size: 1 # TODO: add default behaviour when batch_size=0
+
+
+# Evaluation
+freq_eval: 5
+
+
+
+

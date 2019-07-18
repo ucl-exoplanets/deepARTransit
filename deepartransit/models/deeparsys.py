@@ -35,9 +35,9 @@ class DeepARSysModel(BaseModel):
         rnn_at_layer = []
         state_at_layer = []
         for _ in range(self.config.num_layers):
-            rnn_at_layer.append(tf.nn.rnn_cell.LSTMCell(self.config.hidden_units, **self.config.cell_args))
-            #state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
-            state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
+            rnn_at_layer.append(tf.keras.layers.LSTMCell(self.config.hidden_units, **self.config.cell_args))
+            state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
+            #state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
 
         loc_decoder_for = tf.layers.Dense(self.config.num_features)
         scale_decoder_for = tf.layers.Dense(self.config.num_features, activation='sigmoid')
@@ -126,7 +126,9 @@ class DeepARSysModel(BaseModel):
 class DeepARSysTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None):
         super().__init__(sess, model, data, config, logger=logger)
-        self.transit = LinearTransit(data.time_array[:config.pretrans_length +
+        self.transit = [[]] * self.data.Z.shape[0]
+        for i in range(self.data.Z.shape[0]):
+            self.transit[i] = LinearTransit(data.time_array[:config.pretrans_length +
                                                      config.trans_length +
                                                      config.postrans_length])
 
@@ -195,32 +197,34 @@ class DeepARSysTrainer(BaseTrainer):
 
         transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :l1+l2+l3]).sum(-1) /
                              self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
-        #print(transit_component.shape, np.expand_dims(locs, 0).shape, self.data.Z.shape, self.data.time_array.shape)
+        #print(locs.shape, scales.shape, transit_component.shape, self.data.Z.shape, self.data.time_array.shape)
         #t_c, delta, T, tau = fit_transit_linear(transit_component, time_array=self.data.time_array[:l1+l2+l3],
         #                                        repeat=self.config.batch_size)
-        self.transit.fit(transit_component, range_fit=range(l1+l2+l3), p0=self.transit.transit_pars)
+
+        for i in range(self.data.Z.shape[0]):
+            self.transit[i].fit(transit_component[i], range_fit=range(l1+l2+l3), p0=self.transit[i].transit_pars, time_axis=0)
+            print(self.transit[i].transit_pars)
         t4 = timer()
         # saving transit parameters
         np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
-                np.array(self.transit.transit_pars))
+                np.array([self.transit[i].transit_pars for i in range(self.data.Z.shape[0])]))
 
         # compute metrics
         ###############
         #TODO: change the repeat provisional thing...
-        transit_fit_rep = np.expand_dims(self.transit.get_flux(), -1).repeat(self.config.batch_size, -1)
-
-        mse_transit = ((transit_component.T - transit_fit_rep)**2).mean()
+        transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
+        mse_transit = ((transit_component - transit_fit)**2).mean()
 
         # TENSORBOARD eval summary
         summaries_dict = {
-                          't_c': np.array(self.transit.transit_pars[0]),
-                          'delta': np.array(self.transit.transit_pars[1]),
-                          'T': np.array(self.transit.transit_pars[2]),
-                          'tau': np.array(self.transit.transit_pars[3]),
+                          #'t_c': np.array([self.transit[i].transit_pars[0] for i in range(self.data.Z.shape[0])]),
+                          #'delta': np.array([self.transit[i].transit_pars[1] for i in range(self.data.Z.shape[0])]),
+                          #'T': np.array([self.transit[i].transit_pars[2] for i in range(self.data.Z.shape[0])]),
+                          #'tau': np.array([self.transit[i].transit_pars[3] for i in range(self.data.Z.shape[0])]),
                           'mse_transit': np.array(mse_transit),
                           'trans_length': np.array(self.model.trans_length),
                           'margin_length': np.array(self.model.margin_length),
-                          'learning_rate': np.array(self.model.learning_rate_tensor.eval(self.sess))
+                          #'learning_rate': np.array(self.model.learning_rate_tensor.eval(self.sess))
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
