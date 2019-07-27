@@ -49,6 +49,12 @@ class DeepARSysModel(BaseModel):
         loc_decoder_for = tf.layers.Dense(self.config.num_features)
         scale_decoder_for = tf.layers.Dense(self.config.num_features, activation='sigmoid')
 
+        in_outside_range = lambda t, obs: t < self.pretrans_length[obs] or t >= self.pretrans_length[obs] + \
+                                          self.trans_length[obs]
+        in_margin_range = lambda t, obs: ((t < self.pretrans_length[obs] + self.margin_length[obs])
+                                          or (t >= self.pretrans_length[obs] + self.trans_length[obs] -
+                                              self.margin_length[obs]))
+
         if self.config.bidirectional:
             rnn_back_at_layer = []
             state_back_at_layer = []
@@ -123,9 +129,6 @@ class DeepARSysModel(BaseModel):
 
 
         for t in range(self.T):
-            in_outside_range = lambda t,obs: t < self.pretrans_length[obs] or t >= self.pretrans_length[obs] + self.trans_length[obs]
-            in_margin_range = lambda t,obs: ((t < self.pretrans_length[obs] + self.margin_length[obs])
-                                or (t >= self.pretrans_length[obs] + self.trans_length[obs] - self.margin_length[obs]))
             for obs in range(self.config.batch_size):
                 if in_outside_range(t, obs) or (self.config.train_margin and in_margin_range(t, obs)):
                     likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t], self.loc_at_time[t][obs])
@@ -168,7 +171,7 @@ class DeepARSysTrainer(BaseTrainer):
 
     def train_step(self):
         batch_Z, batch_X = next(self.data.next_batch(self.config.batch_size))
-        if self.config.num_features > 1:
+        if self.config.num_features > 10:
             weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
         else:
             weights = np.ones(batch_Z[:,0,:].shape)
@@ -204,15 +207,19 @@ class DeepARSysTrainer(BaseTrainer):
         t3 = timer()
         # Fit transit
         #################
-        print('test')
-        print(np.array(locs).shape, np.array(scales).shape)
+        #print('test')
+        #print(np.array(locs).shape, np.array(scales).shape)
         transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :self.model.T]).sum(-1) /
                              self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
 
         for i in range(self.data.Z.shape[0]):
-            self.transit[i].fit(transit_component[i],
-                                range_fit=range(5, self.model.T-5), # goal = avoid extremities quircks
-                                p0=self.transit[i].transit_pars, time_axis=0)
+            try:
+                self.transit[i].fit(transit_component[i],
+                                    range_fit=range(5, self.model.T-5), # goal = avoid extremities quircks
+                                    p0=self.transit[i].transit_pars, time_axis=0)
+            except ValueError:
+                print('problem when fitting (ValueError)')
+                continue
             print(self.transit[i].transit_pars)
         t4 = timer()
         # saving transit parameters
@@ -224,17 +231,20 @@ class DeepARSysTrainer(BaseTrainer):
         #TODO: change the repeat provisional thing...
         transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
         mse_transit = ((transit_component - transit_fit)**2).mean()
-
+        std_depths = np.std([self.transit[i].transit_params for i in range(len(self.transit))])
         # TENSORBOARD eval summary
+        lr = self.model.learning_rate_tensor.eval(self.sess)
+        print(lr)
         summaries_dict = {
                           #'t_c': np.array([self.transit[i].transit_pars[0] for i in range(self.data.Z.shape[0])]),
                           #'delta': np.array([self.transit[i].transit_pars[1] for i in range(self.data.Z.shape[0])]),
                           #'T': np.array([self.transit[i].transit_pars[2] for i in range(self.data.Z.shape[0])]),
                           #'tau': np.array([self.transit[i].transit_pars[3] for i in range(self.data.Z.shape[0])]),
                           'mse_transit': np.array(mse_transit),
-                          'trans_length': np.array(self.model.trans_length),
-                          'margin_length': np.array(self.model.margin_length),
-                          #'learning_rate': np.array(self.model.learning_rate_tensor.eval(self.sess))
+                          'std_transit': np.array(std_depths),
+                          #'trans_length': np.array(self.model.trans_length),
+                          #'margin_length': np.array(self.model.margin_length),
+                          #'learning_rate': )
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
@@ -247,10 +257,9 @@ class DeepARSysTrainer(BaseTrainer):
 
     def update_ranges(self, margin = 1.05, verbose=True):
         for obs in range(self.data.Z.shape[0]):
-            self.model.trans_length[obs] = int(self.transit[obs].duration * margin)
+            self.model.trans_length[obs] = int(np.ceil(self.transit[obs].duration * margin))
             self.model.pretrans_length[obs] = int(np.floor(self.transit[obs].t_c - self.model.trans_length[obs] // 2))
-            self.model.postrans_length[obs] = ((self.config.trans_length[obs] + self.config.pretrans_length[obs] + self.config.postrans_length[obs])
-                                    - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
-            self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration -1 ) // 2
+            self.model.postrans_length[obs] = (self.model.T - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
+            self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2
             if verbose:
                 print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))

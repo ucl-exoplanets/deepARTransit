@@ -96,7 +96,7 @@ class BaseTrainer:
                 if ('adapt_ranges' in self.config
                         and self.config.adapt_ranges
                         and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
-                    self.update_ranges()
+                    self.update_ranges(margin=self.config.margin)
 
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()

@@ -29,12 +29,22 @@ def process_config(yaml_file, **args):
     config.plots_dir = os.path.join("deepartransit", "experiments", config.exp_name, "plots/")
     config.output_dir =  os.path.join("deepartransit", "experiments", config.exp_name, "output/")
 
-    if 'stop_adapt_frac' not in config:
-        config['stop_adapt_frac'] = 0.5
+
     if 'bidirectional' not in config:
         config['bidirectional'] = False
+        print('defaulting bidirectional to False')
+    if 'adapt_range' not in config:
+        config['adapt_range'] = True
+        print('defaulting adapt range to True')
+    if config['adapt_range'] and 'stop_adapt_frac' not in config:
+        config['stop_adapt_frac'] = 0.5
+        print('defaulting stop adapt frac to 0.5')
+    if config['adapt_range'] and 'margin' not in config:
+        config['margin'] = 1.03
+        print('defaulting stop adapt frac to 0.5')
     if 'train_margin' not in config:
         config['train_margin'] = True
+        print('defaulting train_margin to True')
     if 'starter_learning_rate' in config:
         if 'end_learning_rate' not in config:
             config['end_learning_rate'] = config['starter_learning_rate'] / 100
