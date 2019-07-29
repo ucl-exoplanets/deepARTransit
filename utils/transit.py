@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.optimize as opt
+import pylightcurve as pylc
+import matplotlib.pylab as plt
 
 #TODO: tensorflow implementation
 
@@ -51,21 +53,35 @@ class Transit:
                                    absolute_sigma=True,
                                    p0=self.p0,
                                    bounds=self.bounds,
-                                   maxfev=100000)
+                                   maxfev=500000)
         self.popt = popt
         self.pcov = pcov
         if replace_pars:
             self.transit_pars = popt
         return 0
 
+    def plot(self, **plot_args):
+        plt.plot(self.time_array, self.flux, **plot_args)
+
     def _get_duration(self):
         raise NotImplementedError
     def _get_t_c(self):
         raise NotImplementedError
+    def _get_delta(self):
+        raise NotImplementedError
+    def _get_err(self):
+        return np.sqrt(np.diag(self.pcov))
+
+    def _get_err_delta(self):
+        return NotImplementedError
 
     flux = property(get_flux)
     duration = property(_get_duration)
     t_c = property(_get_t_c)
+    delta = property(_get_delta)
+    err = property(_get_err)
+    err_delta = property(_get_err_delta)
+
 
 class LinearTransit(Transit):
     def __init__(self, time_array, transit_pars=None):
@@ -85,7 +101,7 @@ class LinearTransit(Transit):
                  (self.time_array[self.range_fit][-1],
                   0.5,
                   duration,
-                  duration/3))
+                  duration/5))
         else:
             self.bounds = bounds
 
@@ -104,8 +120,89 @@ class LinearTransit(Transit):
     def _get_t_c(self):
         return self.transit_pars[0]
 
+    def _get_delta(self):
+        return self.transit_pars[1]
+    def _get_err_delta(self):
+        return self.err[1]
+
+    delta = property(_get_delta)
     duration = property(_get_duration)
     t_c = property(_get_t_c)
+    err_delta = property(_get_err_delta)
+
+
+class LLDTransit(Transit):
+    def __init__(self, time_array, transit_pars=None):
+        super().__init__(time_array, transit_pars)
+
+    def _default_pars(self, p0=None, bounds=None):
+        duration = self.time_array[self.range_fit][-1] - self.time_array[self.range_fit[0]]
+
+        if p0 is None:
+            self.p0 = [ 0.05,
+                        0.01,
+                        duration * 2,
+                        1,
+                        88,
+                        0.05,
+                        0, # periastron
+                        np.median(self.time_array[self.range_fit])
+                        ]
+
+        else:
+            self.p0 = p0
+        if bounds is None:
+            self.bounds = [( 0.,
+                            0.,
+                            duration /2 ,
+                            1.,
+                            45.,  # inclination
+                             0.,  # eccentricity
+                            0.,  # periastron
+                            self.time_array[self.range_fit][0]),
+                             (1.5,
+                              0.5,
+                              duration * 10,
+                              100_000,
+                              90.,
+                              0.5,
+                              90.,  # periastron
+                              self.time_array[self.range_fit][-1]
+                              )]
+        else:
+            self.bounds = bounds
+
+    @staticmethod
+    def _compute_flux(time_array, u, rp_over_rs, period, sma_over_rs, inclination, eccentricity, periastron, mid_time):
+
+        return pylc.transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+                            periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
+
+
+    def _get_duration(self):
+        return pylc.transit_duration(*self.transit_pars[1:7])
+
+    def _get_delta(self):
+        return self.transit_pars[1]**2
+
+    def _get_err_delta(self):
+        return self.err[1]**2
+
+    def _get_t_c(self):
+        return self.transit_pars[-1]
+
+    delta = property(_get_delta)
+    err_delta = property(_get_err_delta)
+    duration = property(_get_duration)
+    t_c = property(_get_t_c)
+
+def get_transit_model(model = 'linear'):
+    if model.lower() in ['linear', 'lineartransit']:
+        print('selecting linear transit model')
+        return LinearTransit
+    elif model.lower() in ['lld', 'linearlimbdarkening', 'lldtransit']:
+        print('selecting Linear Dark-Limbening model')
+        return LLDTransit
 
 if __name__ == '__main__':
     N = 100

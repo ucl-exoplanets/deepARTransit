@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-from utils.transit import LinearTransit
+from utils.transit import LinearTransit, LLDTransit
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
@@ -142,13 +142,11 @@ class DeepARSysModel(BaseModel):
 
 
 class DeepARSysTrainer(BaseTrainer):
-    def __init__(self, sess, model, data, config, logger=None):
+    def __init__(self, sess, model, data, config, logger=None, transit_model = LinearTransit):
         super().__init__(sess, model, data, config, logger=logger)
         self.transit = [[]] * self.data.Z.shape[0]
         for i in range(self.data.Z.shape[0]):
-            self.transit[i] = LinearTransit(data.time_array[:config.pretrans_length +
-                                                     config.trans_length +
-                                                     config.postrans_length])
+            self.transit[i] = transit_model(data.time_array[:self.model.T])
 
     def train_epoch(self):
         losses = []
@@ -189,7 +187,7 @@ class DeepARSysTrainer(BaseTrainer):
         return samples_cond_test
 
     def eval_step(self, verbose=True):
-        cur_it = self.model.global_step_tensor.eval(self.sess)
+        cur_it = self.model.global_step_tensor.eval()
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
 
         t1 = timer()
@@ -214,13 +212,15 @@ class DeepARSysTrainer(BaseTrainer):
 
         for i in range(self.data.Z.shape[0]):
             try:
+                B = min(self.model.T//20, 5) # ensure we have at least 90% of the points for the fit
+
                 self.transit[i].fit(transit_component[i],
-                                    range_fit=range(5, self.model.T-5), # goal = avoid extremities quircks
+                                    range_fit=range(0 + B, self.model.T - B), # goal = avoid extremities quircks
                                     p0=self.transit[i].transit_pars, time_axis=0)
-            except ValueError:
+            except NotImplementedError:
                 print('problem when fitting (ValueError)')
                 continue
-            print(self.transit[i].transit_pars)
+            print('delta:', self.transit[i].delta)
         t4 = timer()
         # saving transit parameters
         np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
@@ -231,10 +231,9 @@ class DeepARSysTrainer(BaseTrainer):
         #TODO: change the repeat provisional thing...
         transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
         mse_transit = ((transit_component - transit_fit)**2).mean()
-        std_depths = np.std([self.transit[i].transit_params for i in range(len(self.transit))])
+        std_depths = np.std([self.transit[i].delta for i in range(len(self.transit))])
         # TENSORBOARD eval summary
-        lr = self.model.learning_rate_tensor.eval(self.sess)
-        print(lr)
+        lr = self.model.learning_rate_tensor.eval()
         summaries_dict = {
                           #'t_c': np.array([self.transit[i].transit_pars[0] for i in range(self.data.Z.shape[0])]),
                           #'delta': np.array([self.transit[i].transit_pars[1] for i in range(self.data.Z.shape[0])]),
@@ -244,7 +243,7 @@ class DeepARSysTrainer(BaseTrainer):
                           'std_transit': np.array(std_depths),
                           #'trans_length': np.array(self.model.trans_length),
                           #'margin_length': np.array(self.model.margin_length),
-                          #'learning_rate': )
+                          'learning_rate': lr
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)

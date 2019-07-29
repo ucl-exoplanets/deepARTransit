@@ -7,6 +7,7 @@ from utils.config import get_config_file, process_config
 from utils.dirs import create_dirs
 from utils.logger import Logger
 from utils.argumenting import get_args
+from utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -42,22 +43,27 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-
-        model.load(sess)
+        if not config.from_scratch:
+            model.load(sess)
         logger = Logger(sess, config)
-        trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger)
+
+        transit_model = get_transit_model(config['transit_model'])
+        print(transit_model)
+        trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
         trainer.train(verbose=True)
-    #     #samples = trainer.sample_sys_traces()
-    #
-    # # Saving output array
-    # #np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
-    # #print('prediction sample of shape {} saved'.format(np.array(samples).shape))
-    #
-    # # Look at predictions on 'transit' range
+
+        print(data.Z.shape, data.X.shape)
+        samples = trainer.sample_sys_traces()
+
+    # Saving output array
+    np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
+    print('prediction sample of shape {} saved'.format(np.array(samples).shape))
+
+    # Look at predictions on 'transit' range
     # t1 = model.config.pretrans_length
     # t2 = t1 + model.config.trans_length
     # t3 = t2 + model.config.postrans_length
-    #
+
     # plt.figure()
     # for pixel in range(samples.shape[1]):
     #     plt.clf()

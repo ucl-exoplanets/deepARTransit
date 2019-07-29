@@ -55,6 +55,9 @@ def process_config(yaml_file, **args):
     else:
         if 'learning_rate' not in config:
             config['learning_rate'] = 0.001
+    if 'transit_model' not in config:
+        config['transit_model'] = 'linear'
+        print('defaulting transit mode to linear')
     return config
 
 def get_config_file(dir_, file_name=None, extension='.yml'):
