@@ -95,6 +95,7 @@ class BaseTrainer:
                     print('train epoch result:', result)
                 if ('adapt_ranges' in self.config
                         and self.config.adapt_ranges
+                        and cur_epoch >= self.config.start_adapt_frac
                         and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
                     self.update_ranges(margin=self.config.margin)
 
