@@ -213,10 +213,11 @@ class DeepARSysTrainer(BaseTrainer):
         for i in range(self.data.Z.shape[0]):
             try:
                 B = min(self.model.T//20, 5) # ensure we have at least 90% of the points for the fit
-
-                self.transit[i].fit(transit_component[i],
-                                    range_fit=range(0 + B, self.model.T - B), # goal = avoid extremities quircks
-                                    p0=self.transit[i].transit_pars, time_axis=0)
+                p0 = None if (self.transit[i].transit_pars is None or
+                         np.isinf(np.array(self.transit[i].transit_pars)).any()
+                         or np.isnan(self.transit[i].transit_pars ).any()) else self.transit[i].transit_pars
+                self.transit[i].fit(transit_component[i], range_fit=range(0 + B, self.model.T - B),
+                                    p0=p0, time_axis=0)
             except NotImplementedError:
                 print('problem when fitting (ValueError)')
                 continue
@@ -256,7 +257,11 @@ class DeepARSysTrainer(BaseTrainer):
 
     def update_ranges(self, margin = 1.05, verbose=True):
         for obs in range(self.data.Z.shape[0]):
-            self.model.trans_length[obs] = int(np.ceil(self.transit[obs].duration * margin))
+            if np.isnan(self.transit[obs].duration) or np.isinf(self.transit[obs].duration):
+                duration = self.model.config['trans_length']
+            else:
+                duration = self.transit[obs].duration
+            self.model.trans_length[obs] = int(np.ceil(duration * margin))
             self.model.pretrans_length[obs] = int(np.floor(self.transit[obs].t_c - self.model.trans_length[obs] // 2))
             self.model.postrans_length[obs] = (self.model.T - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
             self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2

@@ -41,7 +41,7 @@ def process_config(yaml_file, **args):
         print('defaulting stop adapt frac to 0.5')
     if config['adapt_range'] and 'start_adapt_frac' not in config:
         config['start_adapt_frac'] = 0.01
-        print('defaulting stop adapt frac to 0.5')
+        print('defaulting start adapt frac to 0.5')
     if config['adapt_range'] and 'margin' not in config:
         config['margin'] = 1.03
         print('defaulting stop adapt frac to 0.5')
