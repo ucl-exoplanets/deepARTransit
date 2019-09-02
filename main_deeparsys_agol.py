@@ -15,8 +15,7 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 if __name__ == '__main__':
     #config_path = os.path.join('deepartransit','experiments', 'deeparsys_dev','deeparsys_config.yml')
     config_dict = {}
-    agol_aorkeys = ['22807296', '24537600', '22807808', '27603712', '22809088', '22807552', '27773440',
-                    '22809344', '24537856', '27603456', '22810112', '22808832']
+    agol_aorkeys = ['22807296', '22807552', '22807808', '24537856', '27603712', '27773440']
     for aorkey in agol_aorkeys:
         try:
             args = get_args()
@@ -33,9 +32,9 @@ if __name__ == '__main__':
             exit(0)
 
         config_dict[aorkey] = process_config(config_file,
-                                             exp_name='cobweb/agol_rlc_r{}/{}'.format(radius, aorkey),
-                                             data_path = 'deepartransit/data/agol_189733b_r{}/rlc_{}.npy'.format(radius, aorkey),
-                                             cov_path = 'deepartransit/data/agol_189733b_r{}/cent_{}.npy'.format(radius, aorkey))
+                                             exp_name='cobweb/agol_artif_transits_bidirect/{}'.format(aorkey),
+                                             data_path = 'deepartransit/data/agol_transits_r{}_nobacksub/rlc_artif_{}.npy'.format(radius, aorkey),
+                                             cov_path = 'deepartransit/data/agol_transits_r{}_nobacksub/cent_{}.npy'.format(radius, aorkey))
         print(config_dict[aorkey])
         create_dirs([os.path.join('deepartransit', 'experiments', config_dict[aorkey].exp_name)])
         with open(os.path.join("deepartransit", "experiments", config_dict[aorkey].exp_name, 'config.yml'), 'w') as f:
