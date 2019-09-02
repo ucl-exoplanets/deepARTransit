@@ -7,7 +7,9 @@ class DataGenerator:
         self.config = config
         print('loading data from '+ self.config.data_path)
         self.Z = np.load(self.config.data_path)
-        if self.config.cov_path:
+        self.X = np.zeros(self.Z.shape)
+        self.with_cov = not (self.config.cov_path is None or self.config.cov_path=='None' or 'cov_path' not in self.config)
+        if self.with_cov:
             if isinstance(self.config.cov_path, list):
                 self.X = np.concatenate([np.load(path_) for path_ in self.config.cov_path], -1)
             else:
@@ -29,9 +31,10 @@ class DataGenerator:
         else:
             train_range = range(self.Z.shape[1])
         self.scaler_Z = MeanStdScaler(time_axis=1, train_range=train_range)
-        self.scaler_X = MeanStdScaler(time_axis=1, train_range=train_range)
+        if self.with_cov:
+            self.scaler_X = MeanStdScaler(time_axis=1, train_range=train_range)
         self.Z = self.scaler_Z.fit_transform(self.Z)
-        if self.config.cov_path:
+        if self.with_cov:
             self.X = self.scaler_X.fit_transform(self.X)
 
     def next_batch(self, batch_size):
@@ -46,7 +49,7 @@ class DataGenerator:
         else:
             start_t = 0
             end_t = start_t + self.config.pretrans_length + self.config.trans_length + self.config.postrans_length
-        if self.config.cov_path:
+        if self.with_cov:
             yield (self.Z[idx, start_t:end_t], self.X[idx, start_t:end_t])
         else:
             yield (self.Z[idx, start_t:end_t], None)
