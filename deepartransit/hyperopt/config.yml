@@ -1,0 +1,37 @@
+# Experiment name
+exp_name: cobweb/hyperopt
+
+# Data
+data_path: deepartransit/data/agol_transits_r2_nobacksub_full/rlc_all.npy
+cov_path: deepartransit/data/agol_transits_r2_nobacksub_full/cent_all.npy
+pretrans_length: 330
+trans_length: 300
+postrans_length: 60
+
+# Data modif
+rescaling: True
+
+# Architecture
+num_layers: 2
+hidden_units: 256
+cell_args: {}
+dropout: 0.05
+batch_size: 6
+bidirectional: False
+
+# Algo
+num_traces: 30
+adapt_ranges: True
+train_margin: True
+
+# Training
+from_scratch: True ############# SPECIAL WARNING TO THIS BOOLEAN VALUE WHICH MAY DELETE CHECK
+num_epochs: 4000
+num_iter: 1 # TODO: extract form data_handling structure itself?
+starter_learning_rate: 0.01
+end_learning_Rate: 0.0001
+decay_steps: 6000
+power: 10
+
+# Eval
+freq_eval: 50
