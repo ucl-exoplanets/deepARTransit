@@ -53,7 +53,8 @@ class Transit:
                                    absolute_sigma=True,
                                    p0=self.p0,
                                    bounds=self.bounds,
-                                   maxfev=500000)
+                                   maxfev=1_000_000)
+
         self.popt = popt
         self.pcov = pcov
         if replace_pars:
@@ -195,6 +196,83 @@ class LLDTransit(Transit):
     err_delta = property(_get_err_delta)
     duration = property(_get_duration)
     t_c = property(_get_t_c)
+
+
+class QLDTransit(Transit):
+    def __init__(self, time_array, transit_pars=None):
+        super().__init__(time_array, transit_pars)
+
+    def _default_pars(self, p0=None, bounds=None):
+        duration = self.time_array[self.range_fit][-1] - self.time_array[self.range_fit[0]]
+
+        if p0 is None:
+            self.p0 = [ 0.05,
+                        0.,
+                        0.,
+                        0.,
+                        0.01,
+                        duration * 2,
+                        1,
+                        88,
+                        0.05,
+                        0, # periastron
+                        np.median(self.time_array[self.range_fit])
+                        ]
+
+        else:
+            self.p0 = p0
+        if bounds is None:
+            self.bounds = [( 0.,
+                             -1.,
+                             -1.,
+                             -1.,
+                            0.,
+                            duration /2 ,
+                            1.,
+                            45.,  # inclination
+                             0.,  # eccentricity
+                            0.,  # periastron
+                            self.time_array[self.range_fit][0]),
+                             (1.5,
+                              2.,
+                              2.,
+                              2.,
+                              0.5,
+                              duration * 10,
+                              100_000,
+                              90.,
+                              0.5,
+                              90.,  # periastron
+                              self.time_array[self.range_fit][-1]
+                              )]
+        else:
+            self.bounds = bounds
+
+    @staticmethod
+    def _compute_flux(time_array, ldc1, ldc2, ldc3, ldc4, rp_over_rs, period, sma_over_rs,
+                      inclination, eccentricity, periastron, mid_time):
+
+        return pylc.transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+                            periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
+
+
+    def _get_duration(self):
+        return pylc.transit_duration(*self.transit_pars[4:10])
+
+    def _get_delta(self):
+        return self.transit_pars[4]**2
+
+    def _get_err_delta(self):
+        return self.err[4]**2
+
+    def _get_t_c(self):
+        return self.transit_pars[-1]
+
+    delta = property(_get_delta)
+    err_delta = property(_get_err_delta)
+    duration = property(_get_duration)
+    t_c = property(_get_t_c)
+
 
 def get_transit_model(model = 'linear'):
     if model.lower() in ['linear', 'lineartransit']:

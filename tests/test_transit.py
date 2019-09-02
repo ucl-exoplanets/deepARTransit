@@ -1,5 +1,5 @@
 import numpy as np
-from utils.transit import LinearTransit, LLDTransit
+from utils.transit import LinearTransit, LLDTransit, QLDTransit
 
 N = 100
 time_array = np.linspace(0, 1, N)
@@ -48,5 +48,18 @@ def test_LLDTransit():
     x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars_LLD), 0)
     t.fit(x, sigma = np.random.uniform(1.01, 1.03, N))
     np.testing.assert_allclose(t.delta, pars_LLD[1]**2, rtol=5e-06)
+    #np.testing.assert_allclose(t.transit_pars, pars_LLD)
+
+
+    assert t.duration < time_array[-1] - time_array[0] and t.duration > time_array[1] - time_array[0]
+
+pars_QLD = [0.64959831, -0.04842008, -0.16233996,  0.07468994, 1.44291168e-01, 1.00000000e+01, 3.92659972e+00,
+       8.02690690e+01, 0.005,1e-10, 4.99910154e-01]
+
+def test_QLDTransit():
+    t = QLDTransit(time_array)
+    x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars_QLD), 0)
+    t.fit(x, sigma = np.random.uniform(1.01, 1.03, N))
+    np.testing.assert_allclose(t.delta, pars_QLD[4]**2, rtol=5e-05)
     #np.testing.assert_allclose(t.transit_pars, pars_LLD)
     assert t.duration < time_array[-1] - time_array[0] and t.duration > time_array[1] - time_array[0]
