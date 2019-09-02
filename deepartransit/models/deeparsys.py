@@ -71,6 +71,7 @@ class DeepARSysModel(BaseModel):
 
 
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
+        loss_pred = tf.Variable(0., dtype=tf.float32, name='loss_pred')
 
         for t in range(self.T):
             # initialization of input z_0 with zero
@@ -130,13 +131,18 @@ class DeepARSysModel(BaseModel):
 
         for t in range(self.T):
             for obs in range(self.config.batch_size):
+                likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t],
+                                                                                                        self.loc_at_time[
+                                                                                                            t][obs])
                 if in_outside_range(t, obs) or (self.config.train_margin and in_margin_range(t, obs)):
-                    likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t], self.loc_at_time[t][obs])
                     loss = tf.add(loss, tf.math.divide(likelihood, (self.pretrans_length[obs] + self.postrans_length[obs] -
                                                                     (self.margin_length[obs] if self.config.train_margin else 0))))
-
+                else:
+                    loss_pred = tf.add(loss_pred, tf.math.divide(likelihood, (self.trans_length[obs] +
+                                                                    (self.margin_length[obs] if self.config.train_margin else 0))))
         with tf.name_scope("loss"):
             self.loss = loss
+            self.loss_pred = loss_pred
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_tensor)
             self.train_step = self.optimizer.minimize(loss, global_step=self.global_step_tensor)
 
@@ -145,8 +151,6 @@ class DeepARSysTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None, transit_model = LinearTransit):
         super().__init__(sess, model, data, config, logger=logger)
         self.transit = [[]] * self.data.Z.shape[0]
-        for i in range(self.data.Z.shape[0]):
-            self.transit[i] = transit_model(data.time_array[:self.model.T])
 
     def train_epoch(self):
         losses = []
@@ -161,8 +165,6 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        #if cur_it > int(0.80 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
-        #self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
         if cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
         return loss_epoch
@@ -188,71 +190,35 @@ class DeepARSysTrainer(BaseTrainer):
 
     def eval_step(self, verbose=True):
         cur_it = self.model.global_step_tensor.eval()
-        feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
+        if self.config.num_features > 10:
+           weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
+        else:
+           weights = np.ones(self.data.Z[:,0,:].shape)
+
+        feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X, self.model.weights: weights}
 
         t1 = timer()
-        locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
+        locs, scales, loss_pred = self.sess.run([self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
         np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
                 np.array(locs))
         np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
                 np.array(scales))
-        t2 = timer()
 
-        # Predict and save traces
-        #sampled_traces = self.sample_sys_traces()
-        #np.save(os.path.join(self.config.output_dir, 'pred_array_{}.npy'.format(cur_it)),
-        #        np.array(sampled_traces))
-        t3 = timer()
-        # Fit transit
-        #################
-        #print('test')
-        #print(np.array(locs).shape, np.array(scales).shape)
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :self.model.T]).sum(-1) /
-                             self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
-
-        for i in range(self.data.Z.shape[0]):
-            try:
-                B = min(self.model.T//20, 5) # ensure we have at least 90% of the points for the fit
-                p0 = None if (self.transit[i].transit_pars is None or
-                         np.isinf(np.array(self.transit[i].transit_pars)).any()
-                         or np.isnan(self.transit[i].transit_pars ).any()) else self.transit[i].transit_pars
-                self.transit[i].fit(transit_component[i], range_fit=range(0 + B, self.model.T - B),
-                                    p0=p0, time_axis=0)
-            except NotImplementedError:
-                print('problem when fitting (ValueError)')
-                continue
-            print('delta:', self.transit[i].delta)
         t4 = timer()
-        # saving transit parameters
-        np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
-                np.array([self.transit[i].transit_pars for i in range(self.data.Z.shape[0])]))
 
         # compute metrics
         ###############
-        #TODO: change the repeat provisional thing...
-        transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
-        mse_transit = ((transit_component - transit_fit)**2).mean()
-        std_depths = np.std([self.transit[i].delta for i in range(len(self.transit))])
+        pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
+        mse_pred = np.sqrt(np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(scales, pred_range, axis=0).swapaxes(0,1)))**2))
         # TENSORBOARD eval summary
         lr = self.model.learning_rate_tensor.eval()
         summaries_dict = {
-                          #'t_c': np.array([self.transit[i].transit_pars[0] for i in range(self.data.Z.shape[0])]),
-                          #'delta': np.array([self.transit[i].transit_pars[1] for i in range(self.data.Z.shape[0])]),
-                          #'T': np.array([self.transit[i].transit_pars[2] for i in range(self.data.Z.shape[0])]),
-                          #'tau': np.array([self.transit[i].transit_pars[3] for i in range(self.data.Z.shape[0])]),
-                          'mse_transit': np.array(mse_transit),
-                          'std_transit': np.array(std_depths),
-                          #'trans_length': np.array(self.model.trans_length),
-                          #'margin_length': np.array(self.model.margin_length),
+                          'loss_pred': np.array(loss_pred),
+                          'mse_pred': np.array(mse_pred),
                           'learning_rate': lr
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
-        if verbose:
-            print('STEP (global) {}:\n\tEvaluation: mse_transit = {:0.7f}\n'.format(cur_it, mse_transit)
-                  + '\tSaving predictions vector and fitted transit parameters\n'
-                  + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
-
         return timer() - t1
 
     def update_ranges(self, margin = 1.05, verbose=True):
