@@ -35,6 +35,8 @@ class DeepARSysModel(BaseModel):
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
         self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
 
+
+
         rnn_at_layer = []
         state_at_layer = []
         for l in range(self.config.num_layers):
@@ -88,6 +90,9 @@ class DeepARSysModel(BaseModel):
                         z_prev_list.append(tf.expand_dims(sample_z[obs],0))
 
                 z_prev = tf.concat(z_prev_list, 0)
+                if self.config.add_noise:
+                    z_prev = tf.random.normal(shape=z_prev.shape, mean=z_prev, stddev= self.config.noise_level)
+
             if self.config.num_cov:
                 temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
             else:
@@ -165,7 +170,9 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        if cur_it == self.config.num_epochs - 1:
+        if self.config.early_stop and cur_it >= self.config.num_epochs - 1 - self.config.persistence:
+            self.model.save(self.sess)
+        elif cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
         return loss_epoch
 
@@ -205,11 +212,13 @@ class DeepARSysTrainer(BaseTrainer):
                 np.array(scales))
 
         t4 = timer()
-
+        if self.config.early_stop:
+            self.early_stop_metric_list.append(loss_pred)
         # compute metrics
         ###############
+        print(self.data.Z.shape, np.array(scales).shape)
         pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
-        mse_pred = np.sqrt(np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(scales, pred_range, axis=0).swapaxes(0,1)))**2))
+        mse_pred = np.sqrt(np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0,1)))**2))
         # TENSORBOARD eval summary
         lr = self.model.learning_rate_tensor.eval()
         summaries_dict = {
@@ -233,3 +242,4 @@ class DeepARSysTrainer(BaseTrainer):
             self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2
             if verbose:
                 print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
+

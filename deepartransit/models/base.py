@@ -1,5 +1,6 @@
 import os
 import shutil
+import numpy as np
 import tensorflow as tf
 from timeit import default_timer as timer
 
@@ -79,6 +80,8 @@ class BaseTrainer:
         self.data = data
         self.config = config
         self.logger = logger
+        if self.config.early_stop:
+            self.early_stop_metric_list = []
 
     def train(self, verbose=True):
         initial_epoch = self.model.global_step_tensor.eval(self.sess)
@@ -98,7 +101,9 @@ class BaseTrainer:
                         and cur_epoch >= self.config.start_adapt_frac
                         and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
                     self.update_ranges(margin=self.config.margin)
-
+                if self.config.early_stop and self.early_stop(self.config.persistence):
+                    print("early stopping at epoch {} with metric {}".format(cur_epoch, self.early_stop_metric_list[-1]))
+                    break
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
         print('total training time: {} \nAVG time per epoch: {}'
@@ -106,6 +111,15 @@ class BaseTrainer:
         print('including {}s for {} evaluation steps in total'.format(t_eval,
                                                                       self.config.num_epochs
                                                                       // self.config.freq_eval))
+
+    def early_stop(self, persistence):
+        if (len(self.early_stop_metric_list) >= persistence and
+            self.early_stop_metric_list[-1] >= np.mean(self.early_stop_metric_list[-persistence:-1])):
+            return True
+        else:
+            return False
+
+
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):
