@@ -33,7 +33,8 @@ if __name__ == '__main__':
     list_configs = [c for c in grid_config
                      if c['total_length'] == c['pretrans_length'] + c['trans_length'] + c['postrans_length']]
 
-    df_scores = pd.DataFrame(index=list(range(len(list_configs))), columns=list(list_configs[0].keys())+['score'])
+    df_scores = pd.DataFrame(index=list(range(len(list_configs))),
+                             columns=list(list_configs[0].keys())+['loss_pred', 'nb_epochs', 'mse_pred'])
     print('Starting to run {} models'.format(len(list_configs)))
     for i, config in enumerate(list_configs):
         df_scores.loc[i, config.keys()] = list(config.values())
@@ -59,13 +60,15 @@ if __name__ == '__main__':
             transit_model = get_transit_model(config['transit_model'])
             print(transit_model)
             trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
-            trainer.train(verbose=True)
+            summary_dict = trainer.train(verbose=True)
+            #samples = trainer.sample_sys_traces()
+            nb_epochs = sess.run(model.cur_epoch_tensor)
 
-
-            print(data.Z.shape, data.X.shape)
-            samples = trainer.sample_sys_traces()
+        print(nb_epochs, summary_dict)
         print('best_Score', trainer.best_score)
-        df_scores.loc[i,'score'] = trainer.best_score
+        df_scores.loc[i,'loss_pred'] = trainer.best_score
+        df_scores.loc[i, 'nb_epochs'] = nb_epochs
+        df_scores.loc[i, 'mse_pred'] = summary_dict['mse_pred']
 
         df_scores.to_csv(os.path.join("deepartransit", "experiments", config.exp_name, 'config_scores.csv'))
         # Saving output array

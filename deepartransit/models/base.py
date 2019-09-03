@@ -93,7 +93,7 @@ class BaseTrainer:
         for cur_epoch in range(initial_epoch, self.config.num_epochs):
             result = self.train_epoch()
             if (cur_epoch + 1) % int(self.config.freq_eval) == 0:
-                t_eval += self.eval_step(verbose)
+                t_eval, summary_dict = self.eval_step(verbose)
                 if verbose:
                     print('train epoch result:', result)
                 if ('adapt_ranges' in self.config
@@ -104,6 +104,7 @@ class BaseTrainer:
                 if self.config.early_stop and self.early_stop(self.config.persistence):
                     print("early stopping at epoch {} with metric {}".format(cur_epoch, self.early_stop_metric_list[-1]))
                     print('metric list', self.early_stop_metric_list)
+
                     self.best_score = np.min(self.early_stop_metric_list[-self.config.persistence:])
                     break
             self.sess.run(self.model.increment_cur_epoch_tensor)
@@ -113,6 +114,7 @@ class BaseTrainer:
         print('including {}s for {} evaluation steps in total'.format(t_eval,
                                                                       self.config.num_epochs
                                                                       // self.config.freq_eval))
+        return summary_dict
 
     def early_stop(self, persistence, last_val=3):
         if (len(self.early_stop_metric_list) >= persistence and

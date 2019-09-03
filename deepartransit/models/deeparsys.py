@@ -230,7 +230,7 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
-        return timer() - t1
+        return timer() - t1, summaries_dict
 
     def update_ranges(self, margin = 1.05, verbose=True):
         for obs in range(self.data.Z.shape[0]):
