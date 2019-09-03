@@ -31,10 +31,10 @@ class BaseModel:
     def delete_checkpoints(self):
         if os.path.isdir(self.config.checkpoint_dir):
             print("Deleting model checkpoints ...\n".format(self.config.checkpoint_dir))
-            shutil.rmtree(self.config.checkpoint_dir)
-            shutil.rmtree(self.config.output_dir)
-            shutil.rmtree(self.config.summary_dir)
-            shutil.rmtree(self.config.plots_dir)
+            shutil.rmtree(self.config.checkpoint_dir, ignore_errors=True)
+            shutil.rmtree(self.config.output_dir, ignore_errors=True)
+            shutil.rmtree(self.config.summary_dir, ignore_errors=True)
+            shutil.rmtree(self.config.plots_dir, ignore_errors=True)
             print('deleted whole checkpoint, output and plots directory')
 
     def _init_global_step(self):
@@ -103,6 +103,8 @@ class BaseTrainer:
                     self.update_ranges(margin=self.config.margin)
                 if self.config.early_stop and self.early_stop(self.config.persistence):
                     print("early stopping at epoch {} with metric {}".format(cur_epoch, self.early_stop_metric_list[-1]))
+                    print('metric list', self.early_stop_metric_list)
+                    self.best_score = np.min(self.early_stop_metric_list[-self.config.persistence:])
                     break
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
@@ -112,9 +114,10 @@ class BaseTrainer:
                                                                       self.config.num_epochs
                                                                       // self.config.freq_eval))
 
-    def early_stop(self, persistence):
+    def early_stop(self, persistence, last_val=3):
         if (len(self.early_stop_metric_list) >= persistence and
-            self.early_stop_metric_list[-1] >= np.mean(self.early_stop_metric_list[-persistence:-1])):
+            np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
+            print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
             return True
         else:
             return False

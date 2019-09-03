@@ -6,14 +6,14 @@ class DataGenerator:
     def __init__(self, config):
         self.config = config
         print('loading data from '+ self.config.data_path)
-        self.Z = np.load(self.config.data_path)
+        self.Z = np.load(self.config.data_path)[:,:config.pretrans_length+config.trans_length+config.postrans_length]
         self.X = np.zeros(self.Z.shape)
         self.with_cov = not (self.config.cov_path is None or self.config.cov_path=='None' or 'cov_path' not in self.config)
         if self.with_cov:
             if isinstance(self.config.cov_path, list):
                 self.X = np.concatenate([np.load(path_) for path_ in self.config.cov_path], -1)
             else:
-                self.X = np.load(self.config.cov_path)
+                self.X = np.load(self.config.cov_path)[:,:config.pretrans_length+config.trans_length+config.postrans_length]
             if len(self.X) == 1:
                 self.X = np.repeat(self.X, len(self.Z), axis=0)
             self._check_consistency()

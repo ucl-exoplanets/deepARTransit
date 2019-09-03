@@ -170,10 +170,12 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        if self.config.early_stop and cur_it >= self.config.num_epochs - 1 - self.config.persistence:
+        if self.config.early_stop and self.early_stop(self.config.persistence):
             self.model.save(self.sess)
         elif cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
+            #self.best_score =
+
         return loss_epoch
 
     def train_step(self):

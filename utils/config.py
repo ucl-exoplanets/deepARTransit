@@ -2,7 +2,8 @@
 import yaml
 from bunch import Bunch
 import os
-import tensorflow as tf
+#import tensorflow as tf
+from sklearn.model_selection import ParameterGrid
 
 def get_config_from_yaml(yaml_file):
     """
@@ -62,6 +63,21 @@ def process_config(yaml_file, **args):
         config['transit_model'] = 'linear'
         print('defaulting transit mode to linear')
     return config
+
+
+def split_grid_config(config):
+    """returns the list of individual config objects, considering the grid product
+    of all the collection elements present in the input config object"""
+    param_grid = Bunch(dict())
+    for k,v in config.items():
+        try:
+            assert isinstance(v, list) or isinstance(v, tuple)
+            param_grid[k] = v
+        except AssertionError:
+            param_grid[k] = [v]
+            continue
+    return [Bunch(d) for d in ParameterGrid(param_grid)]
+
 
 def get_config_file(dir_, file_name=None, extension='.yml'):
     cond_on_name = lambda f: f==file_name if (file_name is not None) else ('config' in f and extension in f)
