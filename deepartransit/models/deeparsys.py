@@ -23,7 +23,7 @@ class DeepARSysModel(BaseModel):
         self.margin_length = [0] * self.config.batch_size
         self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
         self.build()
-        super().init_saver()
+        #super().init_saver()
 
 
     def build(self):
@@ -170,10 +170,11 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        if self.config.early_stop and self.early_stop(self.config.persistence):
-            self.model.save(self.sess)
-        elif cur_it == self.config.num_epochs - 1:
-            self.model.save(self.sess)
+        ## Deactivating saving for evaluation mode
+        #if self.config.early_stop and self.early_stop(self.config.persistence):
+        #    self.model.save(self.sess)
+        #elif cur_it == self.config.num_epochs - 1:
+        #    self.model.save(self.sess)
             #self.best_score =
 
         return loss_epoch
@@ -208,14 +209,14 @@ class DeepARSysTrainer(BaseTrainer):
 
         t1 = timer()
         locs, scales, loss_pred = self.sess.run([self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
-        np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
-                np.array(locs))
-        np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
-                np.array(scales))
+        # Deactivating saving for that mode
+        #np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
+        #        np.array(locs))
+        #np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
+        #        np.array(scales))
 
         t4 = timer()
-        if self.config.early_stop:
-            self.early_stop_metric_list.append(loss_pred)
+
         # compute metrics
         ###############
         pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)

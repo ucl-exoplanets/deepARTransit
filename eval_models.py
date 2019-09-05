@@ -4,7 +4,7 @@ import tensorflow as tf
 import matplotlib.pylab as plt
 from deepartransit.models import deeparsys
 from utils.config import get_config_file, process_config, split_grid_config
-from utils.dirs import create_dirs
+from utils.dirs import create_dirs, delete_dirs
 from utils.logger import Logger
 from utils.argumenting import get_args
 from utils.transit import get_transit_model
@@ -47,8 +47,11 @@ if __name__ == '__main__':
 
         model = deeparsys.DeepARSysModel(config)
 
-        model.delete_checkpoints()
-
+        #model.delete_checkpoints()
+        if i:
+            delete_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir])
+        else:
+            delete_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
         create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
 
 
@@ -70,11 +73,11 @@ if __name__ == '__main__':
             summary_dict = trainer.train(verbose=True)
             t3 = timer()
             print('training time:', t3 - t2)
-            #samples = trainer.sample_sys_traces()
+            samples = trainer.sample_sys_traces()
             nb_epochs = sess.run(model.cur_epoch_tensor)
 
         print(nb_epochs, summary_dict)
-        print('best_Score', trainer.best_score)
+        print('best_score', trainer.best_score)
         df_scores.loc[i,'loss_pred'] = trainer.best_score
         df_scores.loc[i, 'nb_epochs'] = nb_epochs
         df_scores.loc[i, 'mse_pred'] = summary_dict['mse_pred']
@@ -83,6 +86,11 @@ if __name__ == '__main__':
 
         df_scores.to_csv(os.path.join("deepartransit", "experiments", config.exp_name, 'config_scores.csv'))
         # Saving output array
-        #np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
-        #print('prediction sample of shape {} saved'.format(np.array(samples).shape))
 
+        np.save(os.path.join(config.output_dir, 'pred_array_{}.npy'.format(i)), np.array(samples))
+        print('prediction sample of shape {} saved'.format(np.array(samples).shape))
+
+        #plt.subplots(data.Z.shape[0], figsize=(15, 3 * data.Z.shape[0]), sharex='col')
+
+        #for obs in range(data.Z.shape[0]):
+        #    plt.scatter(obs)
