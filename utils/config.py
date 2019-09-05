@@ -31,9 +31,15 @@ def process_config(yaml_file, **args):
     config.output_dir =  os.path.join("deepartransit", "experiments", config.exp_name, "output/")
 
 
+    if 'early_stop' not in config:
+        config['early_stop'] = False
+        print('early_stop defaulted to False')
     if 'bidirectional' not in config:
         config['bidirectional'] = False
         print('defaulting bidirectional to False')
+    if 'add_noise' not in config:
+        config['add_noise'] = False
+        print('add_noise defaulted to False')
     if 'adapt_range' not in config:
         config['adapt_range'] = True
         print('defaulting adapt range to True')
