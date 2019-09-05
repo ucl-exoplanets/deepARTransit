@@ -49,7 +49,7 @@ class DataGenerator:
         else:
             start_t = 0
             end_t = start_t + self.config.pretrans_length + self.config.trans_length + self.config.postrans_length
-        if self.with_cov:
+        if self.config['num_cov']:
             yield (self.Z[idx, start_t:end_t], self.X[idx, start_t:end_t])
         else:
             yield (self.Z[idx, start_t:end_t], None)
@@ -101,6 +101,7 @@ class DataGenerator:
             if verbose:
                 print('Inferring num_features, num_cov, num_ts from the data.')
         return self.config
+
 
 if __name__ == '__main__':
     config_dict = {'data_path': '../data_handling/plc_22807808.npy',
