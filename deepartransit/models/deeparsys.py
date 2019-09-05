@@ -218,7 +218,6 @@ class DeepARSysTrainer(BaseTrainer):
             self.early_stop_metric_list.append(loss_pred)
         # compute metrics
         ###############
-        print(self.data.Z.shape, np.array(scales).shape)
         pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
         mse_pred = np.sqrt(np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0,1)))**2))
         # TENSORBOARD eval summary

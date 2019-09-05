@@ -11,6 +11,7 @@ from utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import pandas as pd
+from timeit import default_timer as timer
 
 if __name__ == '__main__':
     #config_path = os.path.join('deepartransit','experiments', 'deeparsys_dev','deeparsys_config.yml')
@@ -34,7 +35,7 @@ if __name__ == '__main__':
                      if c['total_length'] == c['pretrans_length'] + c['trans_length'] + c['postrans_length']]
 
     df_scores = pd.DataFrame(index=list(range(len(list_configs))),
-                             columns=list(list_configs[0].keys())+['loss_pred', 'nb_epochs', 'mse_pred'])
+                             columns=list(list_configs[0].keys())+['loss_pred', 'nb_epochs', 'mse_pred', 'init_time','training_time'])
     print('Starting to run {} models'.format(len(list_configs)))
     for i, config in enumerate(list_configs):
         df_scores.loc[i, config.keys()] = list(config.values())
@@ -42,7 +43,7 @@ if __name__ == '__main__':
         print(config)
         data = data_generator.DataGenerator(config)
         config = data.update_config()
-
+        tf.reset_default_graph()
 
         model = deeparsys.DeepARSysModel(config)
 
@@ -50,17 +51,25 @@ if __name__ == '__main__':
 
         create_dirs([config.summary_dir, config.checkpoint_dir, config.plots_dir, config.output_dir])
 
+
         init = tf.global_variables_initializer()
         with tf.Session() as sess:
+            t0 = timer()
             sess.run(init)
             if not config.from_scratch:
                 model.load(sess)
             logger = Logger(sess, config)
 
             transit_model = get_transit_model(config['transit_model'])
-            print(transit_model)
+            t1 = timer()
+            print('init model time:', t1-t0)
             trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
+            t2 = timer()
+            print('init trainer time:', t2 - t1)
+
             summary_dict = trainer.train(verbose=True)
+            t3 = timer()
+            print('training time:', t3 - t2)
             #samples = trainer.sample_sys_traces()
             nb_epochs = sess.run(model.cur_epoch_tensor)
 
@@ -69,6 +78,8 @@ if __name__ == '__main__':
         df_scores.loc[i,'loss_pred'] = trainer.best_score
         df_scores.loc[i, 'nb_epochs'] = nb_epochs
         df_scores.loc[i, 'mse_pred'] = summary_dict['mse_pred']
+        df_scores.loc[i, 'init_time'] = t2 - t0
+        df_scores.loc[i, 'training_time'] = t3 - t2
 
         df_scores.to_csv(os.path.join("deepartransit", "experiments", config.exp_name, 'config_scores.csv'))
         # Saving output array
