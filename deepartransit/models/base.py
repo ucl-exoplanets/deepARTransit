@@ -80,8 +80,7 @@ class BaseTrainer:
         self.data = data
         self.config = config
         self.logger = logger
-        if self.config.early_stop:
-            self.early_stop_metric_list = []
+        self.best_score = np.inf # ensure that it be set to 0 from first evaluation :)
 
     def train(self, verbose=True):
         initial_epoch = self.model.global_step_tensor.eval(self.sess)
@@ -102,10 +101,7 @@ class BaseTrainer:
                         and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
                     self.update_ranges(margin=self.config.margin)
                 if self.config.early_stop and self.early_stop(self.config.persistence):
-                    print("early stopping at epoch {} with metric {}".format(cur_epoch, self.early_stop_metric_list[-1]))
-                    print('metric list', self.early_stop_metric_list)
-
-                    self.best_score = np.min(self.early_stop_metric_list[-self.config.persistence:])
+                    print("early stopping at epoch {} with metric {}".format(cur_epoch, self.best_score))
                     break
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
@@ -116,10 +112,10 @@ class BaseTrainer:
                                                                       // self.config.freq_eval))
         return summary_dict
 
-    def early_stop(self, persistence, last_val=3):
-        if (len(self.early_stop_metric_list) >= persistence and
-            np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
-            print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
+    def early_stop(self, persistence=5, burn=5, last_val=3):
+        if self.accum_early >= persistence:
+           #np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
+            #print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
             return True
         else:
             return False

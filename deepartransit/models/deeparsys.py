@@ -23,7 +23,7 @@ class DeepARSysModel(BaseModel):
         self.margin_length = [0] * self.config.batch_size
         self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
         self.build()
-        #super().init_saver()
+        super().init_saver()
 
 
     def build(self):
@@ -33,6 +33,7 @@ class DeepARSysModel(BaseModel):
 
         self.Z = tf.placeholder(shape=(None, None, self.config.num_features), dtype=tf.float32)
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
+
         self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
 
 
@@ -175,7 +176,7 @@ class DeepARSysTrainer(BaseTrainer):
         #    self.model.save(self.sess)
         #elif cur_it == self.config.num_epochs - 1:
         #    self.model.save(self.sess)
-            #self.best_score =
+        #    #self.best_score =
 
         return loss_epoch
 
@@ -223,7 +224,14 @@ class DeepARSysTrainer(BaseTrainer):
         mse_pred = np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0,1)))**2)
 
         if self.config.early_stop:
-            self.early_stop_metric_list.append(mse_pred)
+            if mse_pred < self.best_score:
+                self.model.save(self.sess)
+                self.best_score = mse_pred
+                self.accum_early = 0
+            else:
+                self.accum_early += 1
+
+
         # TENSORBOARD eval summary
         lr = self.model.learning_rate_tensor.eval()
         summaries_dict = {

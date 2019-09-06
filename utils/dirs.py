@@ -25,7 +25,7 @@ def delete_dirs(dirs):
     try:
         for dir_ in dirs:
             if os.path.isdir(dir_):
-                shutil.rmtree(dir_)
+                shutil.rmtree(dir_, ignore_errors=True)
         return 0
     except Exception as err:
         print("Deleting directories error: {0}".format(err))

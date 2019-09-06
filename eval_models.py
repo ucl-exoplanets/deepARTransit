@@ -39,8 +39,8 @@ if __name__ == '__main__':
     print('Starting to run {} models'.format(len(list_configs)))
     for i, config in enumerate(list_configs):
         df_scores.loc[i, config.keys()] = list(config.values())
-        print('model ',i)
-        print(config)
+        print('\n\t\t >>>>>>>>> model ',i)
+        #print(config)
         data = data_generator.DataGenerator(config)
         config = data.update_config()
         tf.reset_default_graph()
@@ -73,12 +73,14 @@ if __name__ == '__main__':
             summary_dict = trainer.train(verbose=True)
             t3 = timer()
             print('training time:', t3 - t2)
-            samples = trainer.sample_sys_traces()
             nb_epochs = sess.run(model.cur_epoch_tensor)
+            model.load(sess)  # loading best model
+            trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
+            samples = trainer.sample_sys_traces()
 
         print(nb_epochs, summary_dict)
-        print('best_score', trainer.best_score)
-        df_scores.loc[i,'loss_pred'] = trainer.best_score
+        #print('best_score', trainer.best_score)
+        df_scores.loc[i,'loss_pred'] = summary_dict['loss_pred']
         df_scores.loc[i, 'nb_epochs'] = nb_epochs
         df_scores.loc[i, 'mse_pred'] = summary_dict['mse_pred']
         df_scores.loc[i, 'init_time'] = t2 - t0
@@ -89,8 +91,4 @@ if __name__ == '__main__':
 
         np.save(os.path.join(config.output_dir, 'pred_array_{}.npy'.format(i)), np.array(samples))
         print('prediction sample of shape {} saved'.format(np.array(samples).shape))
-
-        #plt.subplots(data.Z.shape[0], figsize=(15, 3 * data.Z.shape[0]), sharex='col')
-
-        #for obs in range(data.Z.shape[0]):
-        #    plt.scatter(obs)
+        print('\n\t\t <<<<<<<< model {} finished'.format(i))
