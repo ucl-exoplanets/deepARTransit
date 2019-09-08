@@ -1,5 +1,6 @@
 import os
 import shutil
+import numpy as np
 import tensorflow as tf
 from timeit import default_timer as timer
 
@@ -30,10 +31,10 @@ class BaseModel:
     def delete_checkpoints(self):
         if os.path.isdir(self.config.checkpoint_dir):
             print("Deleting model checkpoints ...\n".format(self.config.checkpoint_dir))
-            shutil.rmtree(self.config.checkpoint_dir)
-            shutil.rmtree(self.config.output_dir)
-            shutil.rmtree(self.config.summary_dir)
-            shutil.rmtree(self.config.plots_dir)
+            shutil.rmtree(self.config.checkpoint_dir, ignore_errors=True)
+            shutil.rmtree(self.config.output_dir, ignore_errors=True)
+            shutil.rmtree(self.config.summary_dir, ignore_errors=True)
+            shutil.rmtree(self.config.plots_dir, ignore_errors=True)
             print('deleted whole checkpoint, output and plots directory')
 
     def _init_global_step(self):
@@ -79,6 +80,7 @@ class BaseTrainer:
         self.data = data
         self.config = config
         self.logger = logger
+        self.best_score = np.inf # ensure that it be set to 0 from first evaluation :)
 
     def train(self, verbose=True):
         initial_epoch = self.model.global_step_tensor.eval(self.sess)
@@ -90,7 +92,7 @@ class BaseTrainer:
         for cur_epoch in range(initial_epoch, self.config.num_epochs):
             result = self.train_epoch()
             if (cur_epoch + 1) % int(self.config.freq_eval) == 0:
-                t_eval += self.eval_step(verbose)
+                t_eval, summary_dict = self.eval_step(verbose)
                 if verbose:
                     print('train epoch result:', result)
                 if ('adapt_ranges' in self.config
@@ -98,7 +100,9 @@ class BaseTrainer:
                         and cur_epoch >= self.config.start_adapt_frac
                         and cur_epoch < self.config.num_epochs * self.config.stop_adapt_frac):
                     self.update_ranges(margin=self.config.margin)
-
+                if self.config.early_stop and self.early_stop(self.config.persistence):
+                    print("early stopping at epoch {} with metric {}".format(cur_epoch, self.best_score))
+                    break
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
         print('total training time: {} \nAVG time per epoch: {}'
@@ -106,6 +110,17 @@ class BaseTrainer:
         print('including {}s for {} evaluation steps in total'.format(t_eval,
                                                                       self.config.num_epochs
                                                                       // self.config.freq_eval))
+        return summary_dict
+
+    def early_stop(self, persistence=5, burn=5, last_val=3):
+        if self.accum_early >= persistence:
+           #np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
+            #print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
+            return True
+        else:
+            return False
+
+
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):

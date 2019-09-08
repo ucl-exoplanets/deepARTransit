@@ -21,7 +21,7 @@ bidirectional: True
 
 # Algo
 num_traces: 2
-adapt_ranges: True
+adapt_ranges: False
 
 # Training
 from_scratch: True
