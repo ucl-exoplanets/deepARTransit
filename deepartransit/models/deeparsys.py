@@ -171,10 +171,12 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        #if cur_it > int(0.80 * self.config.num_epochs) and loss < self.model.best_loss_tensor.eval(self.sess):
-        #self.sess.run(tf.assign(self.model.best_loss_tensor, tf.constant(loss, dtype='float32')))
-        if cur_it == self.config.num_epochs - 1:
+        ## Deactivating saving for evaluation mode
+        #if self.config.early_stop and self.early_stop(self.config.persistence):
+        #    self.model.save(self.sess)
+        if not self.config.early_stop and cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
+
         return loss_epoch
 
     def train_step(self):
@@ -206,18 +208,18 @@ class DeepARSysTrainer(BaseTrainer):
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X, self.model.weights: weights}
 
         t1 = timer()
-        locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
-        np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
-                np.array(locs))
-        np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
-                np.array(scales))
-        t2 = timer()
+        locs, scales, loss_pred = self.sess.run([self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
+        # Deactivating saving for that mode
+        #np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
+        #        np.array(locs))
+        #np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
+        #        np.array(scales))
 
         t4 = timer()
 
         # compute metrics
         ###############
-        #TODO: change the repeat provisional thing...
+        pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
         transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
         mse_transit = ((transit_component - transit_fit)**2).mean()
         std_depths = np.std([self.transit[i].delta for i in range(len(self.transit))])
@@ -234,8 +236,16 @@ class DeepARSysTrainer(BaseTrainer):
                           #'margin_length': np.array(self.model.margin_length),
                           'learning_rate': lr
         }
-
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
+
+        if self.config.early_stop:
+            if summaries_dict[self.config.early_stop_metric] < self.best_score:
+                self.model.save(self.sess)
+                self.best_score = summaries_dict[self.config.early_stop_metric]
+                self.accum_early = 0
+            else:
+                self.accum_early += 1
+
         return timer() - t1, summaries_dict
 
     def update_ranges(self, margin = 1.05, verbose=True):
