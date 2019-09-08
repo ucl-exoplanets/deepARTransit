@@ -113,7 +113,7 @@ class DeepARSysModel(BaseModel):
                     z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
                 else:
                     sample_z = tfp.distributions.Normal(loc, scale).sample()
-                    self.sample_at_time.append(sample_z)
+                    #self.sample_at_time.append(sample_z)
                     z_prev_list = []
                     for obs in range(self.config.batch_size):
                         if t < self.postrans_length[obs] or t > (self.postrans_length[obs] + self.trans_length[obs]):
