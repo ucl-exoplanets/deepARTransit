@@ -236,12 +236,7 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
-        if verbose:
-            print('STEP (global) {}:\n\tEvaluation: mse_transit = {:0.7f}\n'.format(cur_it, mse_transit)
-                  + '\tSaving predictions vector and fitted transit parameters\n'
-                  + 'exec times: loc/scales comp = {}s, pred sampling = {}s, transit fiting = {}.s'.format(t2-t1, t3-t2, t4-t3))
-
-        return timer() - t1
+        return timer() - t1, summaries_dict
 
     def update_ranges(self, margin = 1.05, verbose=True):
         for obs in range(self.data.Z.shape[0]):
