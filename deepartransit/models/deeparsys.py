@@ -33,7 +33,10 @@ class DeepARSysModel(BaseModel):
 
         self.Z = tf.placeholder(shape=(None, None, self.config.num_features), dtype=tf.float32)
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
+
         self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
+
+
 
         rnn_at_layer = []
         state_at_layer = []
@@ -71,6 +74,7 @@ class DeepARSysModel(BaseModel):
 
 
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
+        loss_pred = tf.Variable(0., dtype=tf.float32, name='loss_pred')
 
         for t in range(self.T):
             # initialization of input z_0 with zero
@@ -87,6 +91,9 @@ class DeepARSysModel(BaseModel):
                         z_prev_list.append(tf.expand_dims(sample_z[obs],0))
 
                 z_prev = tf.concat(z_prev_list, 0)
+                if self.config.add_noise:
+                    z_prev = tf.random.normal(shape=z_prev.shape, mean=z_prev, stddev= self.config.noise_level)
+
             if self.config.num_cov:
                 temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
             else:
@@ -106,7 +113,7 @@ class DeepARSysModel(BaseModel):
                     z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
                 else:
                     sample_z = tfp.distributions.Normal(loc, scale).sample()
-                    self.sample_at_time.append(sample_z)
+                    #self.sample_at_time.append(sample_z)
                     z_prev_list = []
                     for obs in range(self.config.batch_size):
                         if t < self.postrans_length[obs] or t > (self.postrans_length[obs] + self.trans_length[obs]):
@@ -145,8 +152,6 @@ class DeepARSysTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None, transit_model = LinearTransit):
         super().__init__(sess, model, data, config, logger=logger)
         self.transit = [[]] * self.data.Z.shape[0]
-        for i in range(self.data.Z.shape[0]):
-            self.transit[i] = transit_model(data.time_array[:self.model.T])
 
     def train_epoch(self):
         losses = []
@@ -198,34 +203,7 @@ class DeepARSysTrainer(BaseTrainer):
                 np.array(scales))
         t2 = timer()
 
-        # Predict and save traces
-        #sampled_traces = self.sample_sys_traces()
-        #np.save(os.path.join(self.config.output_dir, 'pred_array_{}.npy'.format(cur_it)),
-        #        np.array(sampled_traces))
-        t3 = timer()
-        # Fit transit
-        #################
-        #print('test')
-        #print(np.array(locs).shape, np.array(scales).shape)
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :self.model.T]).sum(-1) /
-                             self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
-
-        for i in range(self.data.Z.shape[0]):
-            try:
-                B = min(self.model.T//20, 5) # ensure we have at least 90% of the points for the fit
-                p0 = None if (self.transit[i].transit_pars is None or
-                         np.isinf(np.array(self.transit[i].transit_pars)).any()
-                         or np.isnan(self.transit[i].transit_pars ).any()) else self.transit[i].transit_pars
-                self.transit[i].fit(transit_component[i], range_fit=range(0 + B, self.model.T - B),
-                                    p0=p0, time_axis=0)
-            except NotImplementedError:
-                print('problem when fitting (ValueError)')
-                continue
-            print('delta:', self.transit[i].delta)
         t4 = timer()
-        # saving transit parameters
-        np.save(os.path.join(self.config.output_dir, 'trans_pars_{}.npy'.format(cur_it)),
-                np.array([self.transit[i].transit_pars for i in range(self.data.Z.shape[0])]))
 
         # compute metrics
         ###############
@@ -267,3 +245,4 @@ class DeepARSysTrainer(BaseTrainer):
             self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2
             if verbose:
                 print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
+
