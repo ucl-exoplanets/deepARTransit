@@ -137,13 +137,18 @@ class DeepARSysModel(BaseModel):
 
         for t in range(self.T):
             for obs in range(self.config.batch_size):
+                likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t],
+                                                                                                        self.loc_at_time[
+                                                                                                            t][obs])
                 if in_outside_range(t, obs) or (self.config.train_margin and in_margin_range(t, obs)):
-                    likelihood = super().gaussian_likelihood(self.scale_at_time[t][obs], self.weights[obs])(self.Z[obs, t], self.loc_at_time[t][obs])
                     loss = tf.add(loss, tf.math.divide(likelihood, (self.pretrans_length[obs] + self.postrans_length[obs] -
                                                                     (self.margin_length[obs] if self.config.train_margin else 0))))
-
+                else:
+                    loss_pred = tf.add(loss_pred, tf.math.divide(likelihood, (self.trans_length[obs] +
+                                                                    (self.margin_length[obs] if self.config.train_margin else 0))))
         with tf.name_scope("loss"):
             self.loss = loss
+            self.loss_pred = loss_pred
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_tensor)
             self.train_step = self.optimizer.minimize(loss, global_step=self.global_step_tensor)
 
@@ -193,7 +198,12 @@ class DeepARSysTrainer(BaseTrainer):
 
     def eval_step(self, verbose=True):
         cur_it = self.model.global_step_tensor.eval()
-        feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X}
+        if self.config.num_features > 10:
+           weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
+        else:
+           weights = np.ones(self.data.Z[:,0,:].shape)
+
+        feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X, self.model.weights: weights}
 
         t1 = timer()
         locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
