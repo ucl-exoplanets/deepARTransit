@@ -12,6 +12,7 @@ class DeepARModel(BaseModel):
         print(self.config)
         self.build()
         super().init_saver()
+        self._init_learning_rate()
 
     def build(self):
         self.loc_at_time = []

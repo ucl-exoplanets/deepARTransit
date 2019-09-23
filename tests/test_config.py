@@ -1,5 +1,5 @@
 import os
-from utils.config import process_config, get_config_file, split_grid_config
+from deepartransit.utils.config import process_config, get_config_file, split_grid_config
 
 
 config_file = os.path.join('tests', 'deepar_config_test.yml')

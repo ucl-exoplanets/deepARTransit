@@ -1,10 +1,10 @@
 import os
 import tensorflow as tf
 from deepartransit.models import deepar
-from utils.config import process_config
+from deepartransit.utils.config import process_config
 from deepartransit.data_handling import data_generator
-from utils.dirs import create_dirs
-from utils.logger import Logger
+from deepartransit.utils.dirs import create_dirs
+from deepartransit.utils.logger import Logger
 
 config_path = os.path.join('tests', 'deepar_config_test.yml')
 

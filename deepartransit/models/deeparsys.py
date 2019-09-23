@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-from utils.transit import LinearTransit, LLDTransit
+from deepartransit.utils.transit import LinearTransit
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
@@ -14,6 +14,7 @@ Variant from deepAR original network, adapted to transit light curve structure
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
+
         self.trans_length = ([self.config.trans_length] * self.config.batch_size
                              if isinstance(self.config.trans_length, int) else self.config.trans_length)
         self.pretrans_length = ([self.config.pretrans_length] * self.config.batch_size
@@ -22,7 +23,9 @@ class DeepARSysModel(BaseModel):
                                 if isinstance(self.config.postrans_length, int) else self.config.postrans_length)
         self.margin_length = [0] * self.config.batch_size
         self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
+        self._init_learning_rate()
         self.build()
+
         super().init_saver()
 
 

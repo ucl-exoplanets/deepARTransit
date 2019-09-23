@@ -1,13 +1,12 @@
 import os
 import numpy as np
 import tensorflow as tf
-import matplotlib.pylab as plt
 from deepartransit.models import deeparsys
-from utils.config import get_config_file, process_config
-from utils.dirs import create_dirs
-from utils.logger import Logger
-from utils.argumenting import get_args
-from utils.transit import get_transit_model
+from deepartransit.utils.config import get_config_file, process_config
+from deepartransit.utils.dirs import create_dirs
+from deepartransit.utils.logger import Logger
+from deepartransit.utils.argumenting import get_args
+from deepartransit.utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -53,6 +52,7 @@ if __name__ == '__main__':
         trainer.train(verbose=True)
 
         print(data.Z.shape, data.X.shape)
+        trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
         samples = trainer.sample_sys_traces()
 
     # Saving output array

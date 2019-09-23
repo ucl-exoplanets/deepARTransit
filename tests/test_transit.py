@@ -1,5 +1,5 @@
 import numpy as np
-from utils.transit import LinearTransit, LLDTransit, QLDTransit
+from deepartransit.utils.transit import LinearTransit, LLDTransit, QLDTransit
 
 N = 100
 time_array = np.linspace(0, 1, N)

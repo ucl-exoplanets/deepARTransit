@@ -13,6 +13,7 @@ class DeepARTransModel(BaseModel):
         super().__init__(config)
         print(self.config)
         self.build()
+        self._init_learning_rate()
         super().init_saver()
 
     def build(self):
