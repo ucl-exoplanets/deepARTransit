@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.optimize as opt
-import pylightcurve as pylc
+from pylightcurve import transit, transit_duration
 import matplotlib.pylab as plt
 import warnings
 import matplotlib.cbook
@@ -196,12 +196,12 @@ class LLDTransit(Transit):
     @staticmethod
     def _compute_flux(time_array, u, rp_over_rs, period, sma_over_rs, inclination, eccentricity, periastron, mid_time):
 
-        return pylc.transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+        return transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
                             periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
 
     def _get_duration(self):
-        return pylc.transit_duration(*self.transit_pars[1:7])
+        return transit_duration(*self.transit_pars[1:7])
 
     def _get_delta(self):
         return self.transit_pars[1]**2
@@ -272,12 +272,12 @@ class QLDTransit(Transit):
     def _compute_flux(time_array, ldc1, ldc2, ldc3, ldc4, rp_over_rs, period, sma_over_rs,
                       inclination, eccentricity, periastron, mid_time):
 
-        return pylc.transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+        return transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
                             periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
 
     def _get_duration(self):
-        return pylc.transit_duration(*self.transit_pars[4:10])
+        return transit_duration(*self.transit_pars[4:10])
 
     def _get_delta(self):
         return self.transit_pars[4]**2
