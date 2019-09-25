@@ -1,8 +1,6 @@
 import os
 from timeit import default_timer as timer
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
 
 from .deeparsys import DeepARSysModel, DeepARSysTrainer
 from deepartransit.utils.transit import LinearTransit
