@@ -6,7 +6,6 @@ from deepartransit.utils.config import get_config_file, process_config, split_gr
 from deepartransit.utils.dirs import create_dirs, delete_dirs
 from deepartransit.utils.logger import Logger
 from deepartransit.utils.argumenting import get_args
-from deepartransit.utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import pandas as pd
@@ -62,10 +61,9 @@ if __name__ == '__main__':
                 model.load(sess)
             logger = Logger(sess, config)
 
-            transit_model = get_transit_model(config['transit_model'])
             t1 = timer()
             print('init model time:', t1-t0)
-            trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
+            trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger)
             t2 = timer()
             print('init trainer time:', t2 - t1)
 
@@ -74,7 +72,7 @@ if __name__ == '__main__':
             print('training time:', t3 - t2)
             nb_epochs = sess.run(model.cur_epoch_tensor)
             model.load(sess)  # loading best model
-            trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger, transit_model)
+            trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger)
             samples = trainer.sample_sys_traces()
 
         print(nb_epochs, summary_dict)
@@ -85,7 +83,7 @@ if __name__ == '__main__':
         df_scores.loc[i, 'init_time'] = t2 - t0
         df_scores.loc[i, 'training_time'] = t3 - t2
 
-        df_scores.to_csv(os.path.join("deepartransit", "experiments", config.exp_name, 'config_scores.csv'))
+        df_scores.to_csv(os.path.join("experiments", config.exp_name, 'config_scores.csv'))
         # Saving output array
 
         np.save(os.path.join(config.output_dir, 'pred_array_{}.npy'.format(i)), np.array(samples))

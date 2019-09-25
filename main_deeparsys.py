@@ -6,13 +6,11 @@ from deepartransit.utils.config import get_config_file, process_config
 from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
 from deepartransit.utils.argumenting import get_args
-from deepartransit.utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 if __name__ == '__main__':
-    #config_path = os.path.join('deepartransit','experiments', 'deeparsys_dev','deeparsys_config.yml')
     try:
         args = get_args()
         print(args.experiment)
@@ -47,8 +45,6 @@ if __name__ == '__main__':
             model.load(sess)
         logger = Logger(sess, config)
 
-        transit_model = get_transit_model(config['transit_model'])
-        print(transit_model)
         trainer = deeparsys.DeepARSysTrainer(sess, model, data, config, logger)
         trainer.train(verbose=True)
 
