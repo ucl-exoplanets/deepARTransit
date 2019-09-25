@@ -1,8 +1,10 @@
 import numpy as np
 import scipy.optimize as opt
-import pylightcurve as pylc
+from pylightcurve import transit, transit_duration
 import matplotlib.pylab as plt
-
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 #TODO: tensorflow implementation
 
 class Transit:
@@ -106,6 +108,14 @@ class LinearTransit(Transit):
         else:
             self.bounds = bounds
 
+    def __repr__(self):
+        s = "Piecewise linear transit model "
+        if self.transit_pars is None:
+            s += "(t_c ; delta ; T ; tau)"
+        else:
+            s += "(t_c = {:.3g} ; delta = {:.3g} ; T = {:.3g} ; tau = {:.3g})".format(*self.transit_pars)
+        return s
+
     @staticmethod
     def _compute_flux(time_array, t_c, delta, T, tau):
         x1 = time_array - (t_c - T / 2 - tau)
@@ -135,6 +145,16 @@ class LinearTransit(Transit):
 class LLDTransit(Transit):
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
+
+    def __repr__(self):
+        s = "Linear Limb Darkening transit model "
+        if self.transit_pars is None:
+            s += "(u, rp_over_rs, period, sma_over_rs, inclination, eccentricity, periastron, mid_time)"
+        else:
+            s += "(u = {} ; rp_over_rs = {:.3g} ; period = {:.3g} ; sma_over_rs = {:.3g} ; inclination = {:.3g} ; "
+            s += "eccentricity = {:.3g} ; periastron = {:.3g} ; mid_time= {:.3g} )"
+            s = s.format(*self.transit_pars)
+        return s
 
     def _default_pars(self, p0=None, bounds=None):
         duration = self.time_array[self.range_fit][-1] - self.time_array[self.range_fit[0]]
@@ -176,12 +196,12 @@ class LLDTransit(Transit):
     @staticmethod
     def _compute_flux(time_array, u, rp_over_rs, period, sma_over_rs, inclination, eccentricity, periastron, mid_time):
 
-        return pylc.transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+        return transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
                             periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
 
     def _get_duration(self):
-        return pylc.transit_duration(*self.transit_pars[1:7])
+        return transit_duration(*self.transit_pars[1:7])
 
     def _get_delta(self):
         return self.transit_pars[1]**2
@@ -252,12 +272,12 @@ class QLDTransit(Transit):
     def _compute_flux(time_array, ldc1, ldc2, ldc3, ldc4, rp_over_rs, period, sma_over_rs,
                       inclination, eccentricity, periastron, mid_time):
 
-        return pylc.transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
+        return transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
                             periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
 
     def _get_duration(self):
-        return pylc.transit_duration(*self.transit_pars[4:10])
+        return transit_duration(*self.transit_pars[4:10])
 
     def _get_delta(self):
         return self.transit_pars[4]**2

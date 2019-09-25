@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-from utils.transit import LinearTransit, LLDTransit
+from deepartransit.utils.transit import LinearTransit
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
@@ -22,7 +22,9 @@ class DeepARSysModel(BaseModel):
                                 if isinstance(self.config.postrans_length, int) else self.config.postrans_length)
         self.margin_length = [0] * self.config.batch_size
         self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
+        self._init_learning_rate()
         self.build()
+
         super().init_saver()
 
 
@@ -33,10 +35,7 @@ class DeepARSysModel(BaseModel):
 
         self.Z = tf.placeholder(shape=(None, None, self.config.num_features), dtype=tf.float32)
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
-
         self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
-
-
 
         rnn_at_layer = []
         state_at_layer = []

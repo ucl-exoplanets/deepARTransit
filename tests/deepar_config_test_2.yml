@@ -1,7 +1,7 @@
 cond_length: 4
 pred_length: 2
-data_path: deepartransit/data_handling/plc_22807808.npy
-cov_path: deepartransit/data_handling/cent_22807808.npy
+data_path: deepartransit/data/agol_189733b_r2/rlc_22807808.npy
+cov_path: deepartransit/data/agol_189733b_r2/cent_22807808.npy
 rescaling: False
 test_length: 0
 learning_rate: 0.001

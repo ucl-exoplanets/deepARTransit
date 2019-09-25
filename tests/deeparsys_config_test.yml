@@ -2,8 +2,8 @@
 exp_name: deeparsys_test
 
 # Data
-data_path: deepartransit/data_handling/rlc_22807808.npy
-cov_path: deepartransit/data_handling/cent_22807808.npy
+data_path: deepartransit/data/agol_189733b_r2/rlc_22807808.npy
+cov_path: deepartransit/data/agol_189733b_r2/cent_22807808.npy
 num_features: 1
 num_cov: 2
 pretrans_length: 5

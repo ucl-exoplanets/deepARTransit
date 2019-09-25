@@ -2,11 +2,8 @@ import numpy as np
 import sys
 import os
 print(os.getcwd())
-from utils.transit import LinearTransit
-sys.path.append('../spitzerLC/')
-from spitzerlc import data_handling
-from spitzerlc.observation import Observation
-from main import create_dataset
+from deepartransit.utils.transit import LinearTransit
+from spitzerlc.command import create_dataset
 
 
 # Transits aorkeys

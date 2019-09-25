@@ -6,14 +6,23 @@ class DataGenerator:
     def __init__(self, config):
         self.config = config
         print('loading data from '+ self.config.data_path)
-        self.Z = np.load(self.config.data_path)[:,:config.pretrans_length+config.trans_length+config.postrans_length]
+        if 'pretrans_length' in self.config and 'trans_length' in self.config and 'postrans_length' in self.config:
+            self.T = config.pretrans_length+config.trans_length+config.postrans_length
+        else:
+            self.T = None
+        self.Z = np.load(self.config.data_path)[:,:self.T]
         self.X = np.zeros(self.Z.shape)
         self.with_cov = not (self.config.cov_path is None or self.config.cov_path=='None' or 'cov_path' not in self.config)
         if self.with_cov:
             if isinstance(self.config.cov_path, list):
                 self.X = np.concatenate([np.load(path_) for path_ in self.config.cov_path], -1)
             else:
-                self.X = np.load(self.config.cov_path)[:,:config.pretrans_length+config.trans_length+config.postrans_length]
+                if 'pretrans_length' in self.config and 'trans_length' in self.config and 'postrans_length' in self.config:
+                    T = config.pretrans_length + config.trans_length + config.postrans_length
+                    self.X = np.load(self.config.cov_path)[:, :T]
+                else:
+                    self.X = np.load(self.config.cov_path)
+
             if len(self.X) == 1:
                 self.X = np.repeat(self.X, len(self.Z), axis=0)
             self._check_consistency()
@@ -48,7 +57,7 @@ class DataGenerator:
             end_t = start_t + self.config.cond_length + self.config.pred_length
         else:
             start_t = 0
-            end_t = start_t + self.config.pretrans_length + self.config.trans_length + self.config.postrans_length
+            end_t = start_t + self.T
         if self.config['num_cov']:
             yield (self.Z[idx, start_t:end_t], self.X[idx, start_t:end_t])
         else:

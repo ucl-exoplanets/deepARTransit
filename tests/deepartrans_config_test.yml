@@ -2,8 +2,8 @@
 exp_name: cobweb/deepartrans_dev
 
 # Data
-data_path: deepartransit/data_handling/plc_22807808.npy
-cov_path: deepartransit/data_handling/cent_22807808.npy
+data_path: deepartransit/data/agol_189733b_r2/rlc_22807808.npy
+cov_path: deepartransit/data/agol_189733b_r2/cent_22807808.npy
 num_features: 1
 num_cov: 2
 pretrans_length: 80
@@ -22,7 +22,7 @@ rescaling: True
 num_layers: 2
 hidden_units: 4
 cell_args: {}
-batch_size: 25 # TODO: add default behaviour when batch_size=0
+batch_size: 1
 
 # Algo
 num_traces: 2
@@ -31,7 +31,7 @@ num_traces: 2
 from_scratch: True ############# SPECIAL WARNING TO THIS BOOLEAN VALUE WHICH MAY DELETE CHECK
 num_epochs: 2
 num_epochs_out: 1
-num_iter: 1 # TODO: extract form data_handling structure itself?
+num_iter: 1
 learning_rate: 0.001
 
 

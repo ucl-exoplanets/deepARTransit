@@ -8,7 +8,6 @@ class BaseModel:
     def __init__(self, config):
         self.config = config
         self._init_global_step()
-        self._init_learning_rate()
         self._init_cur_epoch()
         self._init_best_loss()
 
@@ -91,6 +90,7 @@ class BaseTrainer:
         t_eval = 0
         for cur_epoch in range(initial_epoch, self.config.num_epochs):
             result = self.train_epoch()
+            summary_dict = []
             if (cur_epoch + 1) % int(self.config.freq_eval) == 0:
                 t_eval, summary_dict = self.eval_step(verbose)
                 if verbose:

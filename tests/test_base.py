@@ -2,9 +2,8 @@ import os
 from bunch import Bunch
 import tensorflow as tf
 from deepartransit.models import base
-from utils.config import process_config
-from utils.dirs import create_dirs
-from utils.logger import Logger
+from deepartransit.utils.dirs import create_dirs
+from deepartransit.utils.logger import Logger
 
 
 config = {

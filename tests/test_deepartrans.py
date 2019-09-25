@@ -1,10 +1,10 @@
 import os
 import tensorflow as tf
 from deepartransit.models import deepartrans
-from utils.config import process_config
-from utils.dirs import create_dirs
+from deepartransit.utils.config import process_config
+from deepartransit.utils.dirs import create_dirs
 from deepartransit.data_handling import data_generator
-from utils.logger import Logger
+from deepartransit.utils.logger import Logger
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 config_path = os.path.join('tests', 'deepartrans_config_test.yml')
