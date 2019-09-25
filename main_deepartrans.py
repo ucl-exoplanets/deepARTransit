@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import tensorflow as tf
-import matplotlib.pylab as plt
-from deepartransit.models import deepartrans
+from deepartransit.models.deepartrans import DeepARTransModel, DeepARTransTrainer
 from deepartransit.utils.config import get_config_file, process_config
 from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
 from deepartransit.utils.argumenting import get_args
+from deepartransit.utils.transit import get_transit_model
 from deepartransit.data_handling import data_generator
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
@@ -29,8 +29,11 @@ if __name__ == '__main__':
         print("missing or invalid arguments")
         exit(0)
 
-    model = deepartrans.DeepARTransModel(config)
+    tf.reset_default_graph()
     data = data_generator.DataGenerator(config)
+    config = data.update_config()
+    model = DeepARTransModel(config)
+
 
     if config.from_scratch:
         model.delete_checkpoints()
@@ -40,38 +43,19 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-
-
-        model.load(sess)
+        if not config.from_scratch:
+            model.load(sess)
         logger = Logger(sess, config)
-        trainer = deepartrans.DeepARTransTrainer(sess, model, data, config, logger)
 
+        transit_model = get_transit_model(config['transit_model'])
+        print(transit_model)
+        trainer = DeepARTransTrainer(sess, model, data, config, logger, transit_model)
         trainer.train(verbose=True)
-        samples = trainer.sample_sys_traces()
-        trans_pars = model.trans_pars.eval(sess)
-        #delta = model.delta.eval(sess)
 
-    # Saving output arrays
+        print(data.Z.shape, data.X.shape)
+        trainer = DeepARTransTrainer(sess, model, data, config, logger, transit_model)
+        samples = trainer.sample_sys_traces()
+
+    # Saving output array
     np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
     print('prediction sample of shape {} saved'.format(np.array(samples).shape))
-    np.save(os.path.join(config.output_dir, 'trans_pars.npy'), np.array(trans_pars))
-    print("predicted transit params {} saved".format(trans_pars))
-
-    # Look at predictions on 'transit' range
-    t1 = model.config.pretrans_length
-    t2 = t1 + model.config.trans_length
-    t3 = t2 + model.config.postrans_length
-
-    plt.figure()
-    for pixel in range(samples.shape[1]):
-        plt.clf()
-        plt.plot(data.Z[pixel, :, 0], label='ground truth', color='blue')
-        plt.plot(data.X[pixel], color='grey', linewidth=1, linestyle='dashed', label='centroid')
-        for trace in range(samples.shape[0]):
-            plt.plot(range(t1, t2 +1), samples[trace, pixel, :, 0], alpha=0.3, linewidth=1)
-        plt.plot(range(t1, t2 + 1), samples[:, pixel, :, 0].mean(axis=0), linestyle=':', color='red', linewidth=4)
-        plt.axvline(config.pretrans_length, 0, 1, linestyle='dashed', color='red')
-        plt.axvline(config.pretrans_length + config.trans_length, 0, 1, linestyle='dashed', color='red')
-        plt.xlim(0, t3)
-        plt.legend()
-        plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))

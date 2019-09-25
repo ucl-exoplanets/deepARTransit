@@ -59,23 +59,3 @@ if __name__ == '__main__':
     # Saving output array
     np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
     print('prediction sample of shape {} saved'.format(np.array(samples).shape))
-
-    # Look at predictions on 'transit' range
-    # t1 = model.config.pretrans_length
-    # t2 = t1 + model.config.trans_length
-    # t3 = t2 + model.config.postrans_length
-
-    # plt.figure()
-    # for pixel in range(samples.shape[1]):
-    #     plt.clf()
-    #     plt.plot(data.Z[pixel, :, 0], label='ground truth', color='blue')
-    #     plt.plot(data.X[pixel], color='grey', linewidth=1, linestyle='dashed', label='centroid')
-    #     for trace in range(samples.shape[0]):
-    #         plt.plot(range(t1, t2 +1), samples[trace, pixel, :, 0], alpha=0.3, linewidth=1)
-    #     plt.plot(range(t1, t2 + 1), samples[:, pixel, :, 0].mean(axis=0), linestyle=':', color='red', linewidth=4)
-    #     plt.axvline(config.pretrans_length, 0, 1, linestyle='dashed', color='red')
-    #     plt.axvline(config.pretrans_length + config.trans_length, 0, 1, linestyle='dashed', color='red')
-    #     plt.xlim(0, t3)
-    #     plt.legend()
-    #     plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
-    #     #plt.show()
