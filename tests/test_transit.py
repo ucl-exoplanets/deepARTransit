@@ -60,6 +60,6 @@ def test_QLDTransit():
     t = QLDTransit(time_array)
     x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars_QLD), 0)
     t.fit(x, sigma = np.random.uniform(1.01, 1.03, N))
-    np.testing.assert_allclose(t.delta, pars_QLD[4]**2, rtol=5e-05)
+    np.testing.assert_allclose(t.delta, pars_QLD[4]**2, rtol=1e-04, atol=1e-05)
     #np.testing.assert_allclose(t.transit_pars, pars_LLD)
     assert t.duration < time_array[-1] - time_array[0] and t.duration > time_array[1] - time_array[0]
