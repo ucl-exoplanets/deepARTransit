@@ -30,10 +30,11 @@ if __name__ == '__main__':
         print("missing or invalid arguments")
         exit(0)
     grid_config = split_grid_config(meta_config)
-    list_configs = [c for c in grid_config]
+    list_configs = [c for c in grid_config
+                     if c['total_length'] == c['pretrans_length'] + c['trans_length'] + c['postrans_length']]
 
     df_scores = pd.DataFrame(index=list(range(len(list_configs))),
-                             columns=list(list_configs[0].keys())+['early_stop_met', 'nb_epochs', 'std_transit', 'init_time','training_time'])
+                             columns=list(list_configs[0].keys())+['loss_pred', 'nb_epochs', 'mse_pred', 'init_time','training_time'])
     print('Starting to run {} models'.format(len(list_configs)))
     for i, config in enumerate(list_configs):
         df_scores.loc[i, config.keys()] = list(config.values())
@@ -78,9 +79,9 @@ if __name__ == '__main__':
 
         print(nb_epochs, summary_dict)
         #print('best_score', trainer.best_score)
-        df_scores.loc[i,'early_stop_met'] = summary_dict[config.early_stop_metric]
+        df_scores.loc[i,'loss_pred'] = summary_dict['loss_pred']
         df_scores.loc[i, 'nb_epochs'] = nb_epochs
-        df_scores.loc[i, 'std_transit'] = summary_dict['std_transit']
+        df_scores.loc[i, 'mse_pred'] = summary_dict['mse_pred']
         df_scores.loc[i, 'init_time'] = t2 - t0
         df_scores.loc[i, 'training_time'] = t3 - t2
 

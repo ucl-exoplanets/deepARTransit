@@ -14,7 +14,6 @@ Variant from deepAR original network, adapted to transit light curve structure
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-
         self.trans_length = ([self.config.trans_length] * self.config.batch_size
                              if isinstance(self.config.trans_length, int) else self.config.trans_length)
         self.pretrans_length = ([self.config.pretrans_length] * self.config.batch_size
@@ -25,7 +24,6 @@ class DeepARSysModel(BaseModel):
         self.T = self.config.trans_length + self.config.pretrans_length + self.config.postrans_length
         self._init_learning_rate()
         self.build()
-
         super().init_saver()
 
 
@@ -36,10 +34,7 @@ class DeepARSysModel(BaseModel):
 
         self.Z = tf.placeholder(shape=(None, None, self.config.num_features), dtype=tf.float32)
         self.X = tf.placeholder(shape=(None, None, self.config.num_cov), dtype=tf.float32)
-
         self.weights = tf.placeholder(shape=(None, self.config.num_features), dtype=tf.float32)
-
-
 
         rnn_at_layer = []
         state_at_layer = []
@@ -160,8 +155,6 @@ class DeepARSysTrainer(BaseTrainer):
     def __init__(self, sess, model, data, config, logger=None, transit_model = LinearTransit):
         super().__init__(sess, model, data, config, logger=logger)
         self.transit = [[]] * self.data.Z.shape[0]
-        for i in range(self.data.Z.shape[0]):
-            self.transit[i] = transit_model(data.time_array[:self.model.T])
 
     def train_epoch(self):
         losses = []
@@ -179,8 +172,9 @@ class DeepARSysTrainer(BaseTrainer):
         ## Deactivating saving for evaluation mode
         #if self.config.early_stop and self.early_stop(self.config.persistence):
         #    self.model.save(self.sess)
-        if not self.config.early_stop and cur_it == self.config.num_epochs - 1:
-            self.model.save(self.sess)
+        #elif cur_it == self.config.num_epochs - 1:
+        #    self.model.save(self.sess)
+        #    #self.best_score =
 
         return loss_epoch
 
@@ -213,53 +207,38 @@ class DeepARSysTrainer(BaseTrainer):
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X, self.model.weights: weights}
 
         t1 = timer()
-        locs, scales = self.sess.run([self.model.loc_at_time, self.model.scale_at_time], feed_dict=feed_dict)
-        np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)), np.array(locs))
-        np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)), np.array(scales))
-        t2 = timer()
-
-        # Fit transit
-        #################
-        transit_component = (self.data.scaler_Z.inverse_transform(self.data.Z[:, :self.model.T]).sum(-1) /
-                             self.data.scaler_Z.inverse_transform(np.swapaxes(locs, 0, 1)).sum(-1))
-        for i in range(self.data.Z.shape[0]):
-            try:
-                B = min(self.model.T // 20, 5)  # ensure we have at least 90% of the points for the fit
-                p0 = None if (self.transit[i].transit_pars is None or
-                     np.isinf(np.array(self.transit[i].transit_pars)).any()
-                     or np.isnan(self.transit[i].transit_pars).any()) else self.transit[i].transit_pars
-                self.transit[i].fit(transit_component[i], range_fit=range(0 + B, self.model.T - B),
-                                    p0 = p0, time_axis = 0)
-            except NotImplementedError:
-                print('problem when fitting (ValueError)')
-                continue
-            print('delta:', self.transit[i].delta)
+        locs, scales, loss_pred = self.sess.run([self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
+        # Deactivating saving for that mode
+        #np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
+        #        np.array(locs))
+        #np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
+        #        np.array(scales))
 
         t4 = timer()
 
         # compute metrics
         ###############
         pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
-        transit_fit = np.array([self.transit[i].flux for i in range(self.data.Z.shape[0])])
-        mse_transit = ((transit_component - transit_fit)[:,pred_range]**2).mean()
-        std_depths = np.std([self.transit[i].delta for i in range(len(self.transit))])
-        # TENSORBOARD eval summary
-        lr = self.model.learning_rate_tensor.eval()
-        summaries_dict = {
-                          'mse_transit': np.array(mse_transit),
-                          'std_transit': np.array(std_depths),
-                          'learning_rate': lr
-        }
-        self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
+        mse_pred = np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0,1)))**2)
 
         if self.config.early_stop:
-            if summaries_dict[self.config.early_stop_metric] < self.best_score:
+            if mse_pred < self.best_score:
                 self.model.save(self.sess)
-                self.best_score = summaries_dict[self.config.early_stop_metric]
+                self.best_score = mse_pred
                 self.accum_early = 0
             else:
                 self.accum_early += 1
 
+
+        # TENSORBOARD eval summary
+        lr = self.model.learning_rate_tensor.eval()
+        summaries_dict = {
+                          'loss_pred': np.array(loss_pred),
+                          'mse_pred': np.array(mse_pred),
+                          'learning_rate': lr
+        }
+
+        self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
         return timer() - t1, summaries_dict
 
     def update_ranges(self, margin = 1.05, verbose=True):
@@ -274,3 +253,4 @@ class DeepARSysTrainer(BaseTrainer):
             self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2
             if verbose:
                 print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
+
