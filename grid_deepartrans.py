@@ -84,7 +84,7 @@ if __name__ == '__main__':
         df_scores.loc[i, 'init_time'] = t2 - t0
         df_scores.loc[i, 'training_time'] = t3 - t2
 
-        df_scores.to_csv(os.path.join("deepartransit", "experiments", config.exp_name, 'config_scores.csv'))
+        df_scores.to_csv(os.path.join("experiments", config.exp_name, 'config_scores.csv'))
         # Saving output array
 
         np.save(os.path.join(config.output_dir, 'pred_array_{}.npy'.format(i)), np.array(samples))
