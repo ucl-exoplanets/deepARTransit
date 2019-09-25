@@ -1,5 +1,7 @@
-deepartransit/experiments/*
 run/*
+!run/experiments/example_exp/
 *.npy
 .ipynb_checkpoints
 notes.txt
+*__pycache__*
+*.pyc
