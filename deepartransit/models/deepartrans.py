@@ -176,9 +176,6 @@ class DeepARTransTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        ## Deactivating saving for evaluation mode
-        #if self.config.early_stop and self.early_stop(self.config.persistence):
-        #    self.model.save(self.sess)
         if not self.config.early_stop and cur_it == self.config.num_epochs - 1:
             self.model.save(self.sess)
 

@@ -1,16 +1,14 @@
-import os
 from timeit import default_timer as timer
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-from deepartransit.utils.transit import LinearTransit
 
 """
 Variant from deepAR original network, adapted to transit light curve structure
 """
-#TODO: reformat for pixels as features
+
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -152,9 +150,8 @@ class DeepARSysModel(BaseModel):
 
 
 class DeepARSysTrainer(BaseTrainer):
-    def __init__(self, sess, model, data, config, logger=None, transit_model = LinearTransit):
+    def __init__(self, sess, model, data, config, logger=None):
         super().__init__(sess, model, data, config, logger=logger)
-        self.transit = [[]] * self.data.Z.shape[0]
 
     def train_epoch(self):
         losses = []
@@ -169,12 +166,8 @@ class DeepARSysTrainer(BaseTrainer):
         }
 
         self.logger.summarize(cur_it, summaries_dict=summaries_dict)
-        ## Deactivating saving for evaluation mode
-        #if self.config.early_stop and self.early_stop(self.config.persistence):
-        #    self.model.save(self.sess)
-        #elif cur_it == self.config.num_epochs - 1:
-        #    self.model.save(self.sess)
-        #    #self.best_score =
+        if not self.config.early_stop and cur_it == self.config.num_epochs - 1:
+            self.model.save(self.sess)
 
         return loss_epoch
 
@@ -241,16 +234,5 @@ class DeepARSysTrainer(BaseTrainer):
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
         return timer() - t1, summaries_dict
 
-    def update_ranges(self, margin = 1.05, verbose=True):
-        for obs in range(self.data.Z.shape[0]):
-            if np.isnan(self.transit[obs].duration) or np.isinf(self.transit[obs].duration):
-                duration = self.model.config['trans_length']
-            else:
-                duration = self.transit[obs].duration
-            self.model.trans_length[obs] = int(np.ceil(duration * margin))
-            self.model.pretrans_length[obs] = int(np.floor(self.transit[obs].t_c - self.model.trans_length[obs] // 2))
-            self.model.postrans_length[obs] = (self.model.T - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
-            self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration ) // 2
-            if verbose:
-                print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))
+
 
