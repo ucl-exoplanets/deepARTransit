@@ -25,10 +25,10 @@ def process_config(yaml_file, **args):
     config, _ = get_config_from_yaml(yaml_file)
     for k, v in args.items():
         config[k] = v
-    config.summary_dir = os.path.join("run", "experiments", config.exp_name, "summary/")
-    config.checkpoint_dir = os.path.join("run", "experiments", config.exp_name, "checkpoint/")
-    config.plots_dir = os.path.join("run", "experiments", config.exp_name, "plots/")
-    config.output_dir =  os.path.join("run", "experiments", config.exp_name, "output/")
+    config.summary_dir = os.path.join("experiments", config.exp_name, "summary/")
+    config.checkpoint_dir = os.path.join("experiments", config.exp_name, "checkpoint/")
+    config.plots_dir = os.path.join("experiments", config.exp_name, "plots/")
+    config.output_dir =  os.path.join("experiments", config.exp_name, "output/")
 
 
     if 'early_stop' not in config:

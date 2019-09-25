@@ -1,5 +1,6 @@
-run/*
-!run/experiments/example_exp/
+run_server/
+experiments/*
+!experiments/example_exp/
 *.npy
 .ipynb_checkpoints
 notes.txt

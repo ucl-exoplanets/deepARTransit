@@ -19,7 +19,7 @@ if __name__ == '__main__':
         print(args.experiment)
         if args.experiment:
             print('ok')
-            config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment.strip()))
+            config_file = get_config_file(os.path.join("experiments", args.experiment.strip()))
             print(config_file)
         else:
             config_file = args.config

@@ -19,7 +19,7 @@ if __name__ == '__main__':
         print(args.experiment)
         if args.experiment:
             print('found an experiment argument:', args.experiment)
-            meta_config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment))
+            meta_config_file = get_config_file(os.path.join("experiments", args.experiment))
             print("which constains a config file", meta_config_file)
         else:
             meta_config_file = args.config

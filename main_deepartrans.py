@@ -18,7 +18,7 @@ if __name__ == '__main__':
         print(args.experiment)
         if args.experiment:
             print('found an experiment argument:', args.experiment)
-            config_file = get_config_file(os.path.join("deepartransit", "experiments", args.experiment))
+            config_file = get_config_file(os.path.join("experiments", args.experiment))
             print("which constains a config file", config_file)
         else:
             config_file = args.config

@@ -7,8 +7,8 @@ from deepartransit.utils.logger import Logger
 
 
 config = {
-    'checkpoint_dir': os.path.join('deepartransit', 'experiments', 'base_test',  'models_checkpoint'),
-    'summary_dir': os.path.join('deepartransit', 'experiments', 'base_test', 'summary')
+    'checkpoint_dir': os.path.join('experiments', 'base_test',  'models_checkpoint'),
+    'summary_dir': os.path.join('experiments', 'base_test', 'summary')
 }
 
 
