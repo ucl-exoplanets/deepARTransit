@@ -1,6 +1,6 @@
 import numpy as np
 from bunch import Bunch
-from pixlc.scaling import MeanStdScaler
+from deepartransit.utils.scaling import MeanStdScaler
 
 class DataGenerator:
     def __init__(self, config):
