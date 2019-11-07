@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="deepartransit",
-    version="0.0.1",
+    version="1.0",
     author="Mario Morvan",
     author_email="mario.morvan.18@ucl.ac.uk",
     description="A library for interpolating transit light curves.",
