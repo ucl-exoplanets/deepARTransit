@@ -24,3 +24,20 @@ Using the notebook located in deepartransit/notebooks/post_processing.ipynb
 
 
 
+### 3- Licensing and citing
+
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
+ while 
+ 
+It can be cited using the following bibtex entry:
+
+    @misc{morvan_deepartransit_2019,
+        author       = {Morvan, Mario},
+        title        = {{DeepARTransit: A library for interpolating and detrending transit light curves}},
+        month        = Dec,
+        year         = 2019,
+        doi          = {190091225},
+        version      = {1.0.0},
+        publisher    = {Zenodo},
+        url          = {https://zenodo.org/badge/latestdoi/190091225}
+        }
