@@ -1,13 +1,14 @@
 import os
-from bunch import Bunch
+
 import tensorflow as tf
+from bunch import Bunch
+
 from deepartransit.models import base
 from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
 
-
 config = {
-    'checkpoint_dir': os.path.join('experiments', 'base_test',  'models_checkpoint'),
+    'checkpoint_dir': os.path.join('experiments', 'base_test', 'models_checkpoint'),
     'summary_dir': os.path.join('experiments', 'base_test', 'summary')
 }
 

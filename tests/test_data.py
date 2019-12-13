@@ -1,6 +1,7 @@
 import os
-from deepartransit.utils.config import process_config
+
 from deepartransit.utils import data_generator
+from deepartransit.utils.config import process_config
 
 config_path = os.path.join('tests', 'deepar_config_test.yml')
 
@@ -17,8 +18,8 @@ def test_data():
     assert Z_test.shape[1] == X_test.shape[1] == config.test_length + config.cond_length
 
 
-
 config_path_2 = os.path.join('tests', 'deepar_config_test_2.yml')
+
 
 def test_data_config_update():
     config = process_config(config_path_2)
@@ -30,7 +31,9 @@ def test_data_config_update():
     assert 'num_ts' in config
     assert config.batch_size == config.num_ts
 
+
 config_path_3 = os.path.join('tests', 'deeparsys_config_test_2.yml')
+
 
 def test_data():
     config = process_config(config_path)
@@ -41,5 +44,5 @@ def test_data():
     assert batch_Z.shape[1] == config.cond_length + config.pred_length == batch_X.shape[1]
 
     assert data.Z.shape[0] == data.X.shape[0]
-    #Z_test, X_test = data.get_test_data()
-    #assert Z_test.shape[1] == X_test.shape[1] == config.test_length + config.cond_length
+    # Z_test, X_test = data.get_test_data()
+    # assert Z_test.shape[1] == X_test.shape[1] == config.test_length + config.cond_length

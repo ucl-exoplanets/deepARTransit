@@ -1,5 +1,7 @@
 import numpy as np
+
 from deepartransit.utils.scaling import Scaler, MeanStdScaler, MinMaxScaler
+
 
 def test_Scalers():
     fixtures = []
@@ -19,7 +21,7 @@ def test_Scalers():
             scaler = Scaler(train_range, time_axis)
             scaler.fit(plc)
 
-            #MinMaxScaler
+            # MinMaxScaler
             scaler = MinMaxScaler(train_range, time_axis)
             scaler.fit(plc)
             np.testing.assert_allclose(np.zeros(plc.min(time_axis).shape),
@@ -44,4 +46,3 @@ def test_Scalers():
 
         except ZeroDivisionError:
             assert scaler.zero_norm
-
