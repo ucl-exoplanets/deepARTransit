@@ -1,5 +1,6 @@
 run_server/
 experiments/*
+fit_results/*
 !experiments/example_exp/
 *.npy
 .ipynb_checkpoints
