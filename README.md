@@ -1,9 +1,10 @@
 # DeepARTransit
-DeepARTransit (Deep Auto-Regressive Transit) is a Python/Tensorflow library for de-trending transit light curves.
+DeepARTransit (Deep Auto-Regressive Transit) is a Python/Tensorflow package for de-trending transit light curves.
 It implements a stacked Long Short-Term Memory network nicknamed TLCD-LSTM (standing for *Transit Light Curve Detrending LSTM*), which: 
-- is trained to predict the next step mean and standard deviation of a gaussian likelihood.
-- is used for interpolating the input time-series on an inner chunk - typically on the in-transit time for transit light curves.
+- is trained to predict the next step's mean and standard deviation of a gaussian likelihood, in a similar fashion as in https://arxiv.org/abs/1704.04110 
+- rather than predicting in the future, the model is used for interpolating the input time-series on an inner chunk - typically on the in-transit time for transit light curves. No loss is computed on this range, where the input time-series values are substituted by the previous prediction (ancestral sampling). 
 
+Used on a transit lightcurve, the output of the TLCD-LSTM provides a prediction for the stellar+instrumental noise, from which one can then infer the obstructed flux due to the planetary transit by fitting a physical model to the detrended lightcurve.
 
 # Usage 
 
@@ -20,8 +21,7 @@ $ python main_deepartrans.py -c configuration_file_path
 
 ### 2- Plot results and transit fitting
 
-Using the notebook located in deepartransit/notebooks/post_processing.ipynb
-
+Example notebook for plotting and fitting results: [post_processing](https://github.com/ucl-exoplanets/deepARTransit/deepartransit/notebooks/post_processing.ipynb).
 
 
 ### 3- Licensing and citing
