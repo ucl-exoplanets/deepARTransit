@@ -1,4 +1,5 @@
 from timeit import default_timer as timer
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -8,6 +9,7 @@ from .base import BaseModel, BaseTrainer
 """
 Variant from deepAR original network, adapted to transit light curve structure
 """
+
 
 class DeepARSysModel(BaseModel):
     def __init__(self, config):
@@ -24,7 +26,6 @@ class DeepARSysModel(BaseModel):
         self.build()
         super().init_saver()
 
-
     def build(self):
         self.loc_at_time = []
         self.scale_at_time = []
@@ -39,10 +40,12 @@ class DeepARSysModel(BaseModel):
         for l in range(self.config.num_layers):
             rnn_at_layer.append(tf.contrib.rnn.LSTMCell(self.config.hidden_units, **self.config.cell_args))
 
-            #state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
-            state_at_layer.append(rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32)) # tf.1 version
+            # state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
+            state_at_layer.append(
+                rnn_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32))  # tf.1 version
             if 'dropout' in self.config:
-                rnn_at_layer[l] = tf.nn.rnn_cell.DropoutWrapper(rnn_at_layer[l], output_keep_prob=1 - self.config.dropout)
+                rnn_at_layer[l] = tf.nn.rnn_cell.DropoutWrapper(rnn_at_layer[l],
+                                                                output_keep_prob=1 - self.config.dropout)
                 print('using dropout rate {}'.format(self.config.dropout))
 
         loc_decoder_for = tf.layers.Dense(self.config.num_features)
@@ -61,13 +64,13 @@ class DeepARSysModel(BaseModel):
                 rnn_back_at_layer.append(tf.nn.rnn_cell.LSTMCell(self.config.hidden_units, **self.config.cell_args))
                 # state_at_layer.append(rnn_at_layer[-1].get_initial_state(batch_size=self.config.batch_size, dtype=tf.float32)) # keras version
                 state_back_at_layer.append(
-                    rnn_back_at_layer[-1].zero_state(batch_size=self.config.batch_size, dtype=tf.float32))  # tf.1 version
+                    rnn_back_at_layer[-1].zero_state(batch_size=self.config.batch_size,
+                                                     dtype=tf.float32))  # tf.1 version
 
             loc_decoder_back = tf.layers.Dense(self.config.num_features)
             scale_decoder_back = tf.layers.Dense(self.config.num_features, activation='sigmoid')
             loc_decoder = tf.layers.Dense(self.config.num_features)
             scale_decoder = tf.layers.Dense(self.config.num_features, activation='sigmoid')
-
 
         loss = tf.Variable(0., dtype=tf.float32, name='loss')
         loss_pred = tf.Variable(0., dtype=tf.float32, name='loss_pred')
@@ -83,12 +86,12 @@ class DeepARSysModel(BaseModel):
                 for obs in range(self.config.batch_size):
                     if t < self.pretrans_length[obs] or t > (self.pretrans_length[obs] + self.trans_length[obs]):
                         z_prev_list.append(tf.expand_dims(self.Z[obs, t - 1], 0))
-                    else: # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
-                        z_prev_list.append(tf.expand_dims(sample_z[obs],0))
+                    else:  # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
+                        z_prev_list.append(tf.expand_dims(sample_z[obs], 0))
 
                 z_prev = tf.concat(z_prev_list, 0)
                 if self.config.add_noise:
-                    z_prev = tf.random.normal(shape=z_prev.shape, mean=z_prev, stddev= self.config.noise_level)
+                    z_prev = tf.random.normal(shape=z_prev.shape, mean=z_prev, stddev=self.config.noise_level)
 
             if self.config.num_cov:
                 temp_input = tf.concat([z_prev, self.X[:, t]], axis=-1)
@@ -109,27 +112,28 @@ class DeepARSysModel(BaseModel):
                     z_prev = tf.zeros(shape=(self.config.batch_size, self.config.num_features))
                 else:
                     sample_z = tfp.distributions.Normal(loc, scale).sample()
-                    #self.sample_at_time.append(sample_z)
+                    # self.sample_at_time.append(sample_z)
                     z_prev_list = []
                     for obs in range(self.config.batch_size):
                         if t < self.postrans_length[obs] or t > (self.postrans_length[obs] + self.trans_length[obs]):
                             z_prev_list.append(tf.expand_dims(self.Z[obs, self.T - t], 0))
                         else:  # sample is drawn for whole transit range + first post_transit time ( so trans_length + 1 times)
-                            z_prev_list.append(tf.expand_dims(sample_z[obs],0))
+                            z_prev_list.append(tf.expand_dims(sample_z[obs], 0))
                     z_prev = tf.concat(z_prev_list, 0)
                 if self.config.num_cov:
-                    temp_input = tf.concat([z_prev, self.X[:, self.T-t-1]], axis=-1)
+                    temp_input = tf.concat([z_prev, self.X[:, self.T - t - 1]], axis=-1)
                 else:
                     temp_input = z_prev
                 for layer in range(self.config.num_layers):
-                    temp_input, state_back_at_layer[layer] = rnn_back_at_layer[layer](temp_input, state_back_at_layer[layer])
+                    temp_input, state_back_at_layer[layer] = rnn_back_at_layer[layer](temp_input,
+                                                                                      state_back_at_layer[layer])
 
                 loc = loc_decoder_back(temp_input)
                 scale = scale_decoder_back(temp_input)
 
-                self.loc_at_time[self.T - t - 1] = loc_decoder(tf.concat( [self.loc_at_time[self.T - t - 1], loc], -1))
-                self.scale_at_time[self.T - t - 1] = scale_decoder(tf.concat( [self.scale_at_time[self.T - t - 1], scale], -1))
-
+                self.loc_at_time[self.T - t - 1] = loc_decoder(tf.concat([self.loc_at_time[self.T - t - 1], loc], -1))
+                self.scale_at_time[self.T - t - 1] = scale_decoder(
+                    tf.concat([self.scale_at_time[self.T - t - 1], scale], -1))
 
         for t in range(self.T):
             for obs in range(self.config.batch_size):
@@ -137,11 +141,14 @@ class DeepARSysModel(BaseModel):
                                                                                                         self.loc_at_time[
                                                                                                             t][obs])
                 if in_outside_range(t, obs) or (self.config.train_margin and in_margin_range(t, obs)):
-                    loss = tf.add(loss, tf.math.divide(likelihood, (self.pretrans_length[obs] + self.postrans_length[obs] -
-                                                                    (self.margin_length[obs] if self.config.train_margin else 0))))
+                    loss = tf.add(loss,
+                                  tf.math.divide(likelihood, (self.pretrans_length[obs] + self.postrans_length[obs] -
+                                                              (self.margin_length[
+                                                                   obs] if self.config.train_margin else 0))))
                 else:
                     loss_pred = tf.add(loss_pred, tf.math.divide(likelihood, (self.trans_length[obs] +
-                                                                    (self.margin_length[obs] if self.config.train_margin else 0))))
+                                                                              (self.margin_length[
+                                                                                   obs] if self.config.train_margin else 0))))
         with tf.name_scope("loss"):
             self.loss = loss
             self.loss_pred = loss_pred
@@ -176,14 +183,14 @@ class DeepARSysTrainer(BaseTrainer):
         if self.config.num_features > 10:
             weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
         else:
-            weights = np.ones(batch_Z[:,0,:].shape)
+            weights = np.ones(batch_Z[:, 0, :].shape)
         _, loss = self.sess.run([self.model.train_step, self.model.loss],
                                 feed_dict={self.model.Z: batch_Z, self.model.X: batch_X, self.model.weights: weights})
         return loss
 
     def sample_sys_traces(self):
         samples_cond_test = np.zeros(shape=(self.config.num_traces, self.config.batch_size,
-                                            self.model.T-1, self.config.num_features))
+                                            self.model.T - 1, self.config.num_features))
         for trace in range(self.config.num_traces):
             samples_cond_test[trace] = np.array(
                 self.sess.run(self.model.sample_at_time, feed_dict={self.model.Z: self.data.Z,
@@ -193,26 +200,28 @@ class DeepARSysTrainer(BaseTrainer):
     def eval_step(self, verbose=True):
         cur_it = self.model.global_step_tensor.eval()
         if self.config.num_features > 10:
-           weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
+            weights = self.data.scaler_Z.centers.squeeze(0) / self.data.scaler_Z.centers.mean(axis=-1).squeeze(0)
         else:
-           weights = np.ones(self.data.Z[:,0,:].shape)
+            weights = np.ones(self.data.Z[:, 0, :].shape)
 
         feed_dict = {self.model.Z: self.data.Z, self.model.X: self.data.X, self.model.weights: weights}
 
         t1 = timer()
-        locs, scales, loss_pred = self.sess.run([self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
+        locs, scales, loss_pred = self.sess.run(
+            [self.model.loc_at_time, self.model.scale_at_time, self.model.loss_pred], feed_dict=feed_dict)
         # Deactivating saving for that mode
-        #np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
+        # np.save(os.path.join(self.config.output_dir, 'loc_array_{}.npy'.format(cur_it)),
         #        np.array(locs))
-        #np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
+        # np.save(os.path.join(self.config.output_dir, 'scales_array_{}.npy'.format(cur_it)),
         #        np.array(scales))
 
         t4 = timer()
 
         # compute metrics
         ###############
-        pred_range = range(self.config.pretrans_length, self.config.pretrans_length+self.config.trans_length)
-        mse_pred = np.mean(((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0,1)))**2)
+        pred_range = range(self.config.pretrans_length, self.config.pretrans_length + self.config.trans_length)
+        mse_pred = np.mean(
+            ((np.take(self.data.Z, pred_range, axis=1) - np.take(locs, pred_range, axis=0).swapaxes(0, 1))) ** 2)
 
         if self.config.early_stop:
             if mse_pred < self.best_score:
@@ -222,17 +231,13 @@ class DeepARSysTrainer(BaseTrainer):
             else:
                 self.accum_early += 1
 
-
         # TENSORBOARD eval summary
         lr = self.model.learning_rate_tensor.eval()
         summaries_dict = {
-                          'loss_pred': np.array(loss_pred),
-                          'mse_pred': np.array(mse_pred),
-                          'learning_rate': lr
+            'loss_pred': np.array(loss_pred),
+            'mse_pred': np.array(mse_pred),
+            'learning_rate': lr
         }
 
         self.logger.summarize(cur_it, summarizer='test', summaries_dict=summaries_dict)
         return timer() - t1, summaries_dict
-
-
-

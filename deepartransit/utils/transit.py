@@ -1,11 +1,15 @@
+import warnings
+
+import matplotlib.cbook
+import matplotlib.pylab as plt
 import numpy as np
 import scipy.optimize as opt
 from pylightcurve import transit, transit_duration
-import matplotlib.pylab as plt
-import warnings
-import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
-#TODO: tensorflow implementation
+
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+
+
+# TODO: tensorflow implementation
 
 class Transit:
     def __init__(self, time_array, transit_pars=None):
@@ -33,7 +37,7 @@ class Transit:
     def _default_pars(self, p0=None, bounds=None):
         raise NotImplementedError
 
-    def fit(self, data, p0=None, bounds=None, range_fit=None, sigma=None, time_axis = 1, replace_pars=True):
+    def fit(self, data, p0=None, bounds=None, range_fit=None, sigma=None, time_axis=1, replace_pars=True):
         if range_fit is None:
             self.range_fit = range(0, self.time_array.shape[-1])
         else:
@@ -68,10 +72,13 @@ class Transit:
 
     def _get_duration(self):
         raise NotImplementedError
+
     def _get_t_c(self):
         raise NotImplementedError
+
     def _get_delta(self):
         raise NotImplementedError
+
     def _get_err(self):
         return np.sqrt(np.diag(self.pcov))
 
@@ -101,10 +108,10 @@ class LinearTransit(Transit):
                             0.,
                             duration / len(self.range_fit),
                             duration / len(self.range_fit)),
-                 (self.time_array[self.range_fit][-1],
-                  0.5,
-                  duration,
-                  duration/5))
+                           (self.time_array[self.range_fit][-1],
+                            0.5,
+                            duration,
+                            duration / 5))
         else:
             self.bounds = bounds
 
@@ -133,6 +140,7 @@ class LinearTransit(Transit):
 
     def _get_delta(self):
         return self.transit_pars[1]
+
     def _get_err_delta(self):
         return self.err[1]
 
@@ -160,36 +168,36 @@ class LLDTransit(Transit):
         duration = self.time_array[self.range_fit][-1] - self.time_array[self.range_fit[0]]
 
         if p0 is None:
-            self.p0 = [ 0.05,
-                        0.01,
-                        duration * 2,
-                        1,
-                        88,
-                        0.05,
-                        0, # periastron
-                        np.median(self.time_array[self.range_fit])
-                        ]
+            self.p0 = [0.05,
+                       0.01,
+                       duration * 2,
+                       1,
+                       88,
+                       0.05,
+                       0,  # periastron
+                       np.median(self.time_array[self.range_fit])
+                       ]
 
         else:
             self.p0 = p0
         if bounds is None:
-            self.bounds = [( 0.,
+            self.bounds = [(0.,
                             0.,
-                            duration /2 ,
+                            duration / 2,
                             1.,
                             45.,  # inclination
-                             0.,  # eccentricity
+                            0.,  # eccentricity
                             0.,  # periastron
                             self.time_array[self.range_fit][0]),
-                             (1.5,
-                              0.5,
-                              duration * 10,
-                              100_000,
-                              90.,
-                              0.5,
-                              90.,  # periastron
-                              self.time_array[self.range_fit][-1]
-                              )]
+                           (1.5,
+                            0.5,
+                            duration * 10,
+                            100_000,
+                            90.,
+                            0.5,
+                            90.,  # periastron
+                            self.time_array[self.range_fit][-1]
+                            )]
         else:
             self.bounds = bounds
 
@@ -197,17 +205,16 @@ class LLDTransit(Transit):
     def _compute_flux(time_array, u, rp_over_rs, period, sma_over_rs, inclination, eccentricity, periastron, mid_time):
 
         return transit('linear', [u], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
-                            periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
-
+                       periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
     def _get_duration(self):
         return transit_duration(*self.transit_pars[1:7])
 
     def _get_delta(self):
-        return self.transit_pars[1]**2
+        return self.transit_pars[1] ** 2
 
     def _get_err_delta(self):
-        return self.err[1]**2
+        return self.err[1] ** 2
 
     def _get_t_c(self):
         return self.transit_pars[-1]
@@ -226,45 +233,45 @@ class QLDTransit(Transit):
         duration = self.time_array[self.range_fit][-1] - self.time_array[self.range_fit[0]]
 
         if p0 is None:
-            self.p0 = [ 0.05,
-                        0.,
-                        0.,
-                        0.,
-                        0.01,
-                        duration * 2,
-                        1,
-                        88,
-                        0.05,
-                        0, # periastron
-                        np.median(self.time_array[self.range_fit])
-                        ]
+            self.p0 = [0.05,
+                       0.,
+                       0.,
+                       0.,
+                       0.01,
+                       duration * 2,
+                       1,
+                       88,
+                       0.05,
+                       0,  # periastron
+                       np.median(self.time_array[self.range_fit])
+                       ]
 
         else:
             self.p0 = p0
         if bounds is None:
-            self.bounds = [( 0.,
-                             -1.,
-                             -1.,
-                             -1.,
+            self.bounds = [(0.,
+                            -1.,
+                            -1.,
+                            -1.,
                             0.,
-                            duration /2 ,
+                            duration / 2,
                             1.,
                             45.,  # inclination
-                             0.,  # eccentricity
+                            0.,  # eccentricity
                             0.,  # periastron
                             self.time_array[self.range_fit][0]),
-                             (1.5,
-                              2.,
-                              2.,
-                              2.,
-                              0.5,
-                              duration * 10,
-                              100_000,
-                              90.,
-                              0.5,
-                              90.,  # periastron
-                              self.time_array[self.range_fit][-1]
-                              )]
+                           (1.5,
+                            2.,
+                            2.,
+                            2.,
+                            0.5,
+                            duration * 10,
+                            100_000,
+                            90.,
+                            0.5,
+                            90.,  # periastron
+                            self.time_array[self.range_fit][-1]
+                            )]
         else:
             self.bounds = bounds
 
@@ -273,17 +280,16 @@ class QLDTransit(Transit):
                       inclination, eccentricity, periastron, mid_time):
 
         return transit('claret', [ldc1, ldc2, ldc3, ldc4], rp_over_rs, period, sma_over_rs, eccentricity, inclination,
-                            periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
-
+                       periastron=0., mid_time=mid_time, time_array=time_array, precision=6)
 
     def _get_duration(self):
         return transit_duration(*self.transit_pars[4:10])
 
     def _get_delta(self):
-        return self.transit_pars[4]**2
+        return self.transit_pars[4] ** 2
 
     def _get_err_delta(self):
-        return self.err[4]**2
+        return self.err[4] ** 2
 
     def _get_t_c(self):
         return self.transit_pars[-1]
@@ -294,13 +300,14 @@ class QLDTransit(Transit):
     t_c = property(_get_t_c)
 
 
-def get_transit_model(model = 'linear'):
+def get_transit_model(model='linear'):
     if model.lower() in ['linear', 'lineartransit']:
         print('selecting linear transit model')
         return LinearTransit
     elif model.lower() in ['lld', 'linearlimbdarkening', 'lldtransit']:
         print('selecting Linear Dark-Limbening model')
         return LLDTransit
+
 
 if __name__ == '__main__':
     N = 100
@@ -309,5 +316,5 @@ if __name__ == '__main__':
 
     t = LinearTransit(time_array)
     x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars), 0)
-    t.fit(x, sigma = np.random.uniform(0.1, 0.2, N))
+    t.fit(x, sigma=np.random.uniform(0.1, 0.2, N))
     print(np.sqrt(np.diag(t.pcov)))

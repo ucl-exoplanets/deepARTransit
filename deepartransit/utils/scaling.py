@@ -1,5 +1,7 @@
-import numpy as np
 import warnings
+
+import numpy as np
+
 
 class Scaler():
     def __init__(self, train_range=None, centers=None, norms=None, time_axis=0):
@@ -38,15 +40,19 @@ class Scaler():
         else:
             self.zero_norm = False
 
+
 class MinMaxScaler(Scaler):
     def __init__(self, train_range=None, time_axis=0):
         super().__init__(train_range=train_range, time_axis=time_axis)
 
     def fit(self, plc, train_range=None):
         super().fit(plc, train_range)
-        self.centers = np.expand_dims(plc.take(self.train_range, self.time_axis).min(axis=self.time_axis), self.time_axis)
-        self.norms = np.expand_dims((plc.take(self.train_range, self.time_axis).max(axis=self.time_axis) - plc.take(self.train_range, self.time_axis).min(axis=self.time_axis)), self.time_axis)
+        self.centers = np.expand_dims(plc.take(self.train_range, self.time_axis).min(axis=self.time_axis),
+                                      self.time_axis)
+        self.norms = np.expand_dims((plc.take(self.train_range, self.time_axis).max(axis=self.time_axis) - plc.take(
+            self.train_range, self.time_axis).min(axis=self.time_axis)), self.time_axis)
         super().check_consistency()
+
 
 class MeanStdScaler(Scaler):
     def __init__(self, train_range=None, time_axis=0):
@@ -54,6 +60,7 @@ class MeanStdScaler(Scaler):
 
     def fit(self, plc, train_range=None):
         super().fit(plc, train_range)
-        self.centers = np.expand_dims(plc.take(self.train_range, self.time_axis).mean(axis=self.time_axis), self.time_axis)
+        self.centers = np.expand_dims(plc.take(self.train_range, self.time_axis).mean(axis=self.time_axis),
+                                      self.time_axis)
         self.norms = np.expand_dims(plc.take(self.train_range, self.time_axis).std(axis=self.time_axis), self.time_axis)
         super().check_consistency()

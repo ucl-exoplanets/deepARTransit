@@ -1,19 +1,21 @@
 import os
+
+import matplotlib.pylab as plt
 import numpy as np
 import tensorflow as tf
-import matplotlib.pylab as plt
+
 from deepartransit.models import deepar
+from deepartransit.utils import data_generator
+from deepartransit.utils.argumenting import get_args
 from deepartransit.utils.config import process_config, get_config_file
 from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
-from deepartransit.utils.argumenting import get_args
-from deepartransit.utils import data_generator
 
 # os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 if __name__ == '__main__':
-    #config_path = os.path.join('deepartransit','experiments', 'deepar_dev','deepar_config.yml')
+    # config_path = os.path.join('deepartransit','experiments', 'deepar_dev','deepar_config.yml')
 
     try:
         args = get_args()
@@ -53,7 +55,6 @@ if __name__ == '__main__':
     np.save(os.path.join(config.output_dir, 'pred_array.npy'), np.array(samples))
     print('prediction sample of shape {} saved'.format(np.array(samples).shape))
 
-
     Z_test, X_test = data.get_test_data()
     plt.figure()
     for pixel in range(samples.shape[1]):
@@ -63,6 +64,4 @@ if __name__ == '__main__':
             plt.plot(samples[trace, pixel, :, 0], color='orange')
         plt.axvline(config.cond_length, 0, 1, linestyle='dashed', color='red')
         plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
-        #plt.show()
-
-
+        # plt.show()

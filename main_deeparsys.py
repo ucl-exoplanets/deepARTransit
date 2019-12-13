@@ -1,15 +1,16 @@
 import os
+
 import numpy as np
 import tensorflow as tf
+
 from deepartransit.models import deeparsys
+from deepartransit.utils import data_generator
+from deepartransit.utils.argumenting import get_args
 from deepartransit.utils.config import get_config_file, process_config
 from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
-from deepartransit.utils.argumenting import get_args
-from deepartransit.utils import data_generator
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-
 
 if __name__ == '__main__':
     try:
@@ -32,7 +33,6 @@ if __name__ == '__main__':
     data = data_generator.DataGenerator(config)
     config = data.update_config()
     model = deeparsys.DeepARSysModel(config)
-
 
     if config.from_scratch:
         model.delete_checkpoints()

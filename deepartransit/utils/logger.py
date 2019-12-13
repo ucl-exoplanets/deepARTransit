@@ -1,9 +1,10 @@
-import tensorflow as tf
 import os
+
+import tensorflow as tf
 
 
 class Logger:
-    def __init__(self, sess,config):
+    def __init__(self, sess, config):
         self.sess = sess
         self.config = config
         self.summary_placeholders = {}
@@ -31,7 +32,8 @@ class Logger:
                         if len(value.shape) <= 1:
                             self.summary_placeholders[tag] = tf.placeholder('float32', value.shape, name=tag)
                         else:
-                            self.summary_placeholders[tag] = tf.placeholder('float32', [None] + list(value.shape[1:]), name=tag)
+                            self.summary_placeholders[tag] = tf.placeholder('float32', [None] + list(value.shape[1:]),
+                                                                            name=tag)
                         if len(value.shape) <= 1:
                             self.summary_ops[tag] = tf.summary.scalar(tag, self.summary_placeholders[tag])
                         else:

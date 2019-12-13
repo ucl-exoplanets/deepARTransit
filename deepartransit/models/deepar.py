@@ -5,7 +5,6 @@ import tensorflow_probability as tfp
 from .base import BaseModel, BaseTrainer
 
 
-
 class DeepARModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -94,8 +93,8 @@ class DeepARTrainer(BaseTrainer):
 
     def sample_on_test(self):
         samples_cond_test = np.zeros(shape=(
-        self.config.num_traces, self.config.batch_size, self.config.cond_length + self.config.test_length,
-        self.config.num_features))
+            self.config.num_traces, self.config.batch_size, self.config.cond_length + self.config.test_length,
+            self.config.num_features))
         Z_test, X_test = self.data.get_test_data()
         for trace in range(self.config.num_traces):
             samples_cond_test[trace] = np.array(

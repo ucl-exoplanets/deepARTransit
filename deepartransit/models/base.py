@@ -1,8 +1,10 @@
 import os
 import shutil
+from timeit import default_timer as timer
+
 import numpy as np
 import tensorflow as tf
-from timeit import default_timer as timer
+
 
 class BaseModel:
     def __init__(self, config):
@@ -45,11 +47,13 @@ class BaseModel:
         with tf.variable_scope('learning_rate'):
             if ("starter_learning_rate" in self.config and "end_learning_rate" in self.config
                     and "power" in self.config and "decay_steps" in self.config):
-                self.learning_rate_tensor = tf.train.polynomial_decay(self.config.starter_learning_rate, self.global_step_tensor,
-                                                               self.config.decay_steps, self.config.end_learning_rate, self.config.power)
+                self.learning_rate_tensor = tf.train.polynomial_decay(self.config.starter_learning_rate,
+                                                                      self.global_step_tensor,
+                                                                      self.config.decay_steps,
+                                                                      self.config.end_learning_rate, self.config.power)
             else:
-                self.learning_rate_tensor = tf.Variable(self.config.learning_rate, trainable=False, name='learning_rate')
-
+                self.learning_rate_tensor = tf.Variable(self.config.learning_rate, trainable=False,
+                                                        name='learning_rate')
 
     # just initialize a tensorflow variable to use it as epoch counter
     def _init_cur_epoch(self):
@@ -67,8 +71,10 @@ class BaseModel:
     @staticmethod
     def gaussian_likelihood(sigma, weights=1.0):
         def gaussian_loss(y_true, y_pred):
-            return tf.reduce_mean(tf.math.multiply(weights, 0.5*tf.log(sigma) + 0.5*tf.math.divide(tf.square(y_true - y_pred), sigma))) + 1e-6 + 6
-            #@return tf.losses.compute_weighted_loss(losses, weights)
+            return tf.reduce_mean(tf.math.multiply(weights, 0.5 * tf.log(sigma) + 0.5 * tf.math.divide(
+                tf.square(y_true - y_pred), sigma))) + 1e-6 + 6
+            # @return tf.losses.compute_weighted_loss(losses, weights)
+
         return gaussian_loss
 
 
@@ -79,7 +85,7 @@ class BaseTrainer:
         self.data = data
         self.config = config
         self.logger = logger
-        self.best_score = np.inf # ensure that it be set to 0 from first evaluation :)
+        self.best_score = np.inf  # ensure that it be set to 0 from first evaluation :)
 
     def train(self, verbose=True):
         initial_epoch = self.model.global_step_tensor.eval(self.sess)
@@ -106,7 +112,7 @@ class BaseTrainer:
             self.sess.run(self.model.increment_cur_epoch_tensor)
         tf = timer()
         print('total training time: {} \nAVG time per epoch: {}'
-              .format(tf-t0, (tf-t0)/(self.config.num_epochs-initial_epoch)))
+              .format(tf - t0, (tf - t0) / (self.config.num_epochs - initial_epoch)))
         print('including {}s for {} evaluation steps in total'.format(t_eval,
                                                                       self.config.num_epochs
                                                                       // self.config.freq_eval))
@@ -114,13 +120,11 @@ class BaseTrainer:
 
     def early_stop(self, persistence=5, burn=5, last_val=3):
         if self.accum_early >= persistence:
-           #np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
-            #print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
+            # np.mean(self.early_stop_metric_list[-last_val:]) >= np.mean(self.early_stop_metric_list[-persistence:-last_val])):
+            # print("{} > {}".format(np.mean(self.early_stop_metric_list[-last_val:]), np.mean(self.early_stop_metric_list[-persistence:-last_val])))
             return True
         else:
             return False
-
-
 
     def train_epoch(self):
         for iteration in range(self.config.num_iter):
@@ -128,7 +132,3 @@ class BaseTrainer:
         cur_it = self.model.global_step_tensor.eval(self.sess)
         self.logger.summarize(cur_it, summaries_dict={})
         self.model.save(self.sess)
-
-
-
-
