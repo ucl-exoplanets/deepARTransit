@@ -21,7 +21,7 @@ $ python main_deepartrans.py -c configuration_file_path
 
 ### 2- Plot results and transit fitting
 
-Example notebook for plotting and fitting results: [post_processing](https://github.com/ucl-exoplanets/deepARTransit/deepartransit/notebooks/post_processing.ipynb).
+Example notebook for plotting and fitting results: [post_processing](https://github.com/ucl-exoplanets/deepartransit/notebooks/post_processing.ipynb).
 
 
 ### 3- Licensing and citing
