@@ -32,11 +32,11 @@ It can be cited using the following bibtex entry:
 
     @misc{morvan_deepartransit_2019,
         author       = {Morvan, Mario},
-        title        = {{DeepARTransit: A library for interpolating and detrending transit light curves}},
+        title        = {{DeepARTransit: A library for interpolating and detrending transit light curves with LSTMs.}},
         month        = Dec,
         year         = 2019,
         doi          = {190091225},
-        version      = {1.0.0},
+        version      = {1.1},
         publisher    = {Zenodo},
         url          = {https://zenodo.org/badge/latestdoi/190091225}
         }
