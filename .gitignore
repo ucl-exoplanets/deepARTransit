@@ -7,3 +7,4 @@ fit_results/*
 notes.txt
 *__pycache__*
 *.pyc
+*events.out.tf*
