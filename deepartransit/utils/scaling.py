@@ -1,9 +1,11 @@
+"""Module containing classes for scaling time series"""
 import warnings
 
 import numpy as np
 
 
 class Scaler():
+    """Parent class for TS scalers"""
     def __init__(self, train_range=None, centers=None, norms=None, time_axis=0):
         self.train_range = None
         self.time_axis = time_axis
@@ -42,6 +44,7 @@ class Scaler():
 
 
 class MinMaxScaler(Scaler):
+    """ Inherited from Scaler, scale TS with min and max"""
     def __init__(self, train_range=None, time_axis=0):
         super().__init__(train_range=train_range, time_axis=time_axis)
 
@@ -55,6 +58,7 @@ class MinMaxScaler(Scaler):
 
 
 class MeanStdScaler(Scaler):
+    """ Inherited from Scaler, scale TS with mean and std"""
     def __init__(self, train_range=None, time_axis=0):
         super().__init__(train_range=train_range, time_axis=time_axis)
 

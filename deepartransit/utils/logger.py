@@ -1,3 +1,7 @@
+"""Contains utility class Logger for interacting with TF model logs.
+
+adapted from https://github.com/MrGemy95/Tensorflow-Project-Template/blob/master/utils/logger.py (Apache 2.0 license)
+"""
 import os
 
 import tensorflow as tf

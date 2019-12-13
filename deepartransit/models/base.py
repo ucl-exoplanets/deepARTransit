@@ -1,3 +1,7 @@
+"""Contains base classes for generic Tensorflow model and trainer.
+
+Both classes adapted from https://github.com/MrGemy95/Tensorflow-Project-Template/tree/master/base (Apache 2.0 license).
+"""
 import os
 import shutil
 from timeit import default_timer as timer

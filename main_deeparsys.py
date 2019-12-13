@@ -1,3 +1,4 @@
+"""Run deeparsys model with params and data specfied in configuration file."""
 import os
 
 import numpy as np

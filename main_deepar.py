@@ -1,3 +1,4 @@
+"""Run deepar model with params and data specfied in configuration file."""
 import os
 
 import matplotlib.pylab as plt
@@ -64,4 +65,3 @@ if __name__ == '__main__':
             plt.plot(samples[trace, pixel, :, 0], color='orange')
         plt.axvline(config.cond_length, 0, 1, linestyle='dashed', color='red')
         plt.savefig(os.path.join(model.config.plots_dir, 'pixel{}.png'.format(pixel)))
-        # plt.show()

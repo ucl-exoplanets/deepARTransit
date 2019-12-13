@@ -1,3 +1,4 @@
+"""Implement a version of DeepARModel (https://arxiv.org/abs/1704.04110) especially adapted for LC input."""
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp

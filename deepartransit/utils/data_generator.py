@@ -1,10 +1,25 @@
+"""Module for data preparation.
+
+Contains the class DataGenerator to help feeding tensorflow recurrent models.
+"""
 import numpy as np
 
 from deepartransit.utils.scaling import MeanStdScaler
 
 
 class DataGenerator:
+    """Prepare input data from config file for subsequent feeding in tensorflow model."""
+
     def __init__(self, config):
+        """Process data given input config bunch dict.
+
+        :param config: bunch dict which containq the following attributes:
+            - data_path: path to numpy array containing the input times-series (samples, length_ts, features)
+            - cov_path (optional): path to covariate time series path (samples, length_ts, features)
+            - time_oath (optional): path to time-series of time values
+            - pretrans_length, trans_length, postrans_length (optional): lengths of various ranges for interpolation
+            - rescaling: Bool to indicate if a (mean-std) scaling of the input should be performed
+        """
         self.config = config
         print('loading data from ' + self.config.data_path)
         if 'pretrans_length' in self.config and 'trans_length' in self.config and 'postrans_length' in self.config:
@@ -49,6 +64,7 @@ class DataGenerator:
             self.X = self.scaler_X.fit_transform(self.X)
 
     def next_batch(self, batch_size):
+        """Return a batch tuple of (data, covariate)"""
         if batch_size:
             idx = np.random.choice(self.Z.shape[0], batch_size)
         else:
@@ -67,10 +83,6 @@ class DataGenerator:
             yield (self.Z[idx, start_t:end_t], None)
 
     def get_test_data(self, batch_size=0):
-        # if batch_size:
-        #    idx = np.random.choice(self.Z.shape[0], batch_size)
-        # else:
-        #    idx = range(self.Z.shape[0])
         cond_test_range = range(self.Z.shape[1] - self.config.test_length - self.config.cond_length, self.Z.shape[1])
         if self.config.cov_path:
             return (self.Z[:, cond_test_range], self.X[:, cond_test_range])
@@ -97,9 +109,7 @@ class DataGenerator:
             raise e('inconsistency between data_handling and config dimensions')
 
     def update_config(self, verbose=True):
-        '''
-        :return: new modified config file with data-related parameters
-        '''
+        """Return the config augmented with data-specific information."""
         self.config['num_features'] = self.Z.shape[-1]
         self.config['num_cov'] = self.X.shape[-1]
         self.config['num_ts'] = self.Z.shape[0]

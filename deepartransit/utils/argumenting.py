@@ -1,7 +1,15 @@
+"""Argument manipulation.
+
+adapted from https://github.com/MrGemy95/Tensorflow-Project-Template/blob/master/utils/utils.py (Apache 2.0 License)
+"""
 import argparse
 
 
 def get_args():
+    """Parse arguments passed to mains.
+
+    :return: dict of arguments including config, experiment and radius
+    """
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument(
         '-c', '--config',

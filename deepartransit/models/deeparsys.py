@@ -1,3 +1,7 @@
+"""Tensorflow model for interpolation of TS.
+
+Architecture type and training loss extended from DeepAR model (https://arxiv.org/abs/1704.04110).
+"""
 from timeit import default_timer as timer
 
 import numpy as np
@@ -5,10 +9,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 from .base import BaseModel, BaseTrainer
-
-"""
-Variant from deepAR original network, adapted to transit light curve structure
-"""
 
 
 class DeepARSysModel(BaseModel):

@@ -1,15 +1,18 @@
+"""Process config files.
+
+process_config and get_config_from_yaml functions adapted from https://github.com/MrGemy95/Tensorflow-Project-Template/blob/master/utils/config.py (Apache 2.0 License)
+"""
 import os
 
 import yaml
 from bunch import Bunch
-# import tensorflow as tf
 from sklearn.model_selection import ParameterGrid
 
 
 def get_config_from_yaml(yaml_file):
-    """
-    Get the config from a json file
-    :param yaml_file:
+    """Get the config dict from a json file.
+
+    :param yaml_file:input config file
     :return: config(namespace) or config(dictionary)
     """
     # parse the configurations from the config json file provided
@@ -22,9 +25,16 @@ def get_config_from_yaml(yaml_file):
     return config, config_dict
 
 
-def process_config(yaml_file, **args):
+def process_config(yaml_file, **kwargs):
+    """Provide ready to use config bunch dict.
+
+    Adds default or specified items to config imported from config file.
+    :param yaml_file: input config file
+    :param kwargs: additional config params (named args)
+    :return: ready to use config bunch dict
+    """
     config, _ = get_config_from_yaml(yaml_file)
-    for k, v in args.items():
+    for k, v in kwargs.items():
         config[k] = v
     config.summary_dir = os.path.join("experiments", config.exp_name, "summary/")
     config.checkpoint_dir = os.path.join("experiments", config.exp_name, "checkpoint/")
@@ -72,8 +82,8 @@ def process_config(yaml_file, **args):
 
 
 def split_grid_config(config):
-    """returns the list of individual config objects, considering the grid product
-    of all the collection elements present in the input config object"""
+    """Return the list of individual config objects, considering the grid product
+    of all the collection elements present in the input config object."""
     param_grid = Bunch(dict())
     for k, v in config.items():
         try:
@@ -86,6 +96,13 @@ def split_grid_config(config):
 
 
 def get_config_file(dir_, file_name=None, extension='.yml'):
+    """Retrieve the eventual config file present in input directory.
+
+    :param dir_: input_dictory
+    :param file_name: possible file_name
+    :param extension: extension of the file to search
+    :return: full path of the config file if found, or 0 otherwise
+    """
     cond_on_name = lambda f: f == file_name if (file_name is not None) else ('config' in f and extension in f)
     candidates = [f for f in os.listdir(dir_) if cond_on_name(f)]
     try:

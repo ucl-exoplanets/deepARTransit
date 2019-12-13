@@ -1,3 +1,4 @@
+"""Module for transit generation or fitting."""
 import warnings
 
 import matplotlib.cbook
@@ -9,15 +10,13 @@ from pylightcurve import transit, transit_duration
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 
-# TODO: tensorflow implementation
-
 class Transit:
+    """Parent class for different types of transit models."""
     def __init__(self, time_array, transit_pars=None):
         self.time_array = time_array
         self.transit_pars = transit_pars
         self.popt = None
         self.pcov = None
-        # self._default_pars()
 
     @staticmethod
     def _compute_flux(time_array, *transit_pars):
@@ -94,6 +93,7 @@ class Transit:
 
 
 class LinearTransit(Transit):
+    """Class inherited from Transit, implementing a piece-wise linear transit model."""
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -151,6 +151,7 @@ class LinearTransit(Transit):
 
 
 class LLDTransit(Transit):
+    """Class inherited from Transit, implementing a transit model with linear lmb-darkening."""
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -226,6 +227,7 @@ class LLDTransit(Transit):
 
 
 class QLDTransit(Transit):
+    """Class inherited from Transit, implementing a transit model with quadratic lmb-darkening."""
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -301,6 +303,7 @@ class QLDTransit(Transit):
 
 
 def get_transit_model(model='linear'):
+    """Convert the input string into an actual Transit Class."""
     if model.lower() in ['linear', 'lineartransit']:
         print('selecting linear transit model')
         return LinearTransit
@@ -309,12 +312,3 @@ def get_transit_model(model='linear'):
         return LLDTransit
 
 
-if __name__ == '__main__':
-    N = 100
-    time_array = np.linspace(0, 1, N)
-    pars = 0.55, 0.1, 0.3, 0.1
-
-    t = LinearTransit(time_array)
-    x = np.expand_dims(t.get_flux(time_array=None, transit_pars=pars), 0)
-    t.fit(x, sigma=np.random.uniform(0.1, 0.2, N))
-    print(np.sqrt(np.diag(t.pcov)))

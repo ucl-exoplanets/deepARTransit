@@ -1,3 +1,7 @@
+"""Tensorflow model for interpolation of TS, adapted for transit light curves detrending.
+
+Architecture and training loss extended from DeepAR model (https://arxiv.org/abs/1704.04110).
+"""
 import os
 from timeit import default_timer as timer
 
@@ -5,10 +9,6 @@ import numpy as np
 
 from deepartransit.utils.transit import LinearTransit
 from .deeparsys import DeepARSysModel, DeepARSysTrainer
-
-"""
-Variant from deepAR original network, adapted to transit light curve structure
-"""
 
 
 class DeepARTransModel(DeepARSysModel):
