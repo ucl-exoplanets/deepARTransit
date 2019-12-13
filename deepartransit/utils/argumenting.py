@@ -27,4 +27,3 @@ def get_args():
 
     args = argparser.parse_args()
     return args
-

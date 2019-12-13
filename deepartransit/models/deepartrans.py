@@ -91,7 +91,7 @@ class DeepARTransTrainer(DeepARSysTrainer):
             self.model.trans_length[obs] = int(np.ceil(duration * margin))
             self.model.pretrans_length[obs] = int(np.floor(self.transit[obs].t_c - self.model.trans_length[obs] // 2))
             self.model.postrans_length[obs] = (
-                        self.model.T - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
+                    self.model.T - (self.model.trans_length[obs] + self.model.pretrans_length[obs]))
             self.model.margin_length[obs] = (self.model.trans_length[obs] - self.transit[obs].duration) // 2
             if verbose:
                 print('Transit length recomputed with margin {}: {}'.format(margin, self.model.trans_length))

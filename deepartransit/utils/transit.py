@@ -12,6 +12,7 @@ warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 class Transit:
     """Parent class for different types of transit models."""
+
     def __init__(self, time_array, transit_pars=None):
         self.time_array = time_array
         self.transit_pars = transit_pars
@@ -94,6 +95,7 @@ class Transit:
 
 class LinearTransit(Transit):
     """Class inherited from Transit, implementing a piece-wise linear transit model."""
+
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -152,6 +154,7 @@ class LinearTransit(Transit):
 
 class LLDTransit(Transit):
     """Class inherited from Transit, implementing a transit model with linear lmb-darkening."""
+
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -228,6 +231,7 @@ class LLDTransit(Transit):
 
 class QLDTransit(Transit):
     """Class inherited from Transit, implementing a transit model with quadratic lmb-darkening."""
+
     def __init__(self, time_array, transit_pars=None):
         super().__init__(time_array, transit_pars)
 
@@ -310,5 +314,3 @@ def get_transit_model(model='linear'):
     elif model.lower() in ['lld', 'linearlimbdarkening', 'lldtransit']:
         print('selecting Linear Dark-Limbening model')
         return LLDTransit
-
-
