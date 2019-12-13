@@ -1,5 +1,4 @@
 import numpy as np
-from bunch import Bunch
 from deepartransit.utils.scaling import MeanStdScaler
 
 class DataGenerator:
@@ -111,12 +110,3 @@ class DataGenerator:
                 print('Inferring num_features, num_cov, num_ts from the data.')
         return self.config
 
-
-if __name__ == '__main__':
-    config_dict = {'data_path': '../data_handling/plc_22807808.npy',
-                   'cov_path': '../data_handling/cent_22807808.npy'}
-    config = Bunch(config_dict)
-
-    DG = DataGenerator(config)
-    print(DG.next_batch(3))
-    #print(DG.Z.shape, DG.X.shape)

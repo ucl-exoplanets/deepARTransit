@@ -1,6 +1,6 @@
 import os
 from deepartransit.utils.config import process_config
-from deepartransit.data_handling import data_generator
+from deepartransit.utils import data_generator
 
 config_path = os.path.join('tests', 'deepar_config_test.yml')
 

@@ -7,7 +7,8 @@ from deepartransit.utils.dirs import create_dirs
 from deepartransit.utils.logger import Logger
 from deepartransit.utils.argumenting import get_args
 from deepartransit.utils.transit import get_transit_model
-from deepartransit.data_handling import data_generator
+from deepartransit.utils import data_generator
+
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
